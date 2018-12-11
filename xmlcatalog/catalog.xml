@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+  
+  <rewriteSystem systemIdStartString="http://www.editeur.org/onix/2.1/reference/" 
+                 rewritePrefix="../2.1/dtd/reference/"/>
+  
+  <rewriteSystem systemIdStartString="http://www.editeur.org/onix/2.1/short/"
+                 rewritePrefix="../2.1/dtd/short/"/>
+  
+  <rewriteSystem systemIdStartString="http://intranet/​onix/​" 
+                 rewritePrefix="../3.0/dtd/reference/"/>
+  
+  <rewriteSystem systemIdStartString="http://intranet/​onix/​" 
+                 rewritePrefix="../3.0/dtd/short/"/>
+  
+</catalog>
