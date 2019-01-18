@@ -576,4 +576,7 @@
 <!-- This comment inserted as a work-around for a known bug in XML Spy -->
 <grammar xmlns="http://relaxng.org/ns/structure/1.0">
   <include href="reference.elt.rng"/>
+  <start>
+    <ref name="ONIXMessage"/>
+  </start>
 </grammar>
