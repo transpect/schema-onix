@@ -13,4 +13,6 @@
   <rewriteSystem systemIdStartString="http://intranet/onix/" 
                  rewritePrefix="../3.0/dtd/short/"/>
   
+  <rewriteURI uriStartString="http://transpect.io/onix/" rewritePrefix="../"/>
+  
 </catalog>
