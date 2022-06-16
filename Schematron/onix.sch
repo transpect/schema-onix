@@ -158,8 +158,6 @@
         </rule>
     </pattern>
   
-
-  
   <pattern id="dreiZeichen">
     <rule context="title | subject | contributor | othertext/d104 ">
      <!-- <let name="dreiIdentZeichen-Regex" value="'.{0,8}([a-zA-Z])\1\1+.{0,8}'"/>-->
