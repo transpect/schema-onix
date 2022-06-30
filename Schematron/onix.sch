@@ -4,24 +4,27 @@
   xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <phase id="test">
-    <active pattern="Bios3"/>
+    <active pattern="SpaceFragezeichen"/>
+<!--    <active pattern="Bios3b"/>-->
   </phase>
 
   <phase id="BiografieFehler">
-    <active pattern="Bios2"/>
-    <active pattern="Bios3"/>
+    <active pattern="Bios1"/>
+    <active pattern="Bios3b"/>
     <active pattern="Bios4"/> 
     <active pattern="BioName"/>
   </phase>
   <phase id="TextFehler">
-    <active pattern="Spaces"/>
-    <active pattern="dreiZeichen"/>
-    <active pattern="Bindestrich2"/>
+    <active pattern="dreiIdentBuchstaben"/>
+    <active pattern="Bindestrich"/>
   </phase>
   <phase id="KodierungsFehler">
+    <active pattern="Spaces"/>
     <active pattern="UmlautFehler"/>
     <active pattern="ZahlFehler"/>
-    <active pattern="ZeichenFehlerFragezeichen"/>
+    <active pattern="FragezeichenInWort"/>
+    <active pattern="SpaceFragezeichen"/>
+    <active pattern="weitereKodierungsFehler"/>
   </phase>
   <phase id="falscheVerwendung">
     <active pattern="BioURL"/>
@@ -33,24 +36,26 @@
     <active pattern="tocDefaultTextFormat"/>
     <active pattern="seitJahren"/>
   </phase>
-  <phase id="Redudanzen">
+  <!--<phase id="Redudanzen">
     <active pattern="SupplierWebsite"/>
-  </phase>
+  </phase>-->
 
 <!--nur ein Contributor, egal welche Rolle (kürzere Formulierung als Bios2)-->
-<!--<pattern id="Bios1">
+  <pattern id="Bios1">
+  <!-- Texte unterscheiden sich -->
     <rule role="error" context="
         product[count(contributor) = 1]
                [contributor/b044]
                /othertext[d102 = '13']/d104">
       <assert test="ancestor::product[1]/contributor[b044]/b044/normalize-space() = normalize-space(.)" > 
-        Es gibt nur einen Contributor und dessen Biografietext weicht vom Text für alle Contributoren ab.
+        Es gibt nur einen Contributor und dessen Biografietext weicht vom Text für alle Contributoren ab. 
+        Wenn es nur einen Contributor gibt, benötigt es keine Biographical note im OtherText composite.
       </assert>
     </rule>
-  </pattern>-->
+  </pattern>
 
 
-  <pattern id="Bios2">
+<!--  <pattern id="Bios2">
     <rule role="error" context="
         product[count(contributor[b035 = 'A01']) = 1]
         [count(contributor[not(b035 = 'A01')]) = 0]
@@ -61,13 +66,13 @@
         Es gibt nur einen Autor (und keine weiteren Contributoren) und dessen Biografietext weicht vom Text für alle Contributoren ab.
       </assert>
     </rule>
-  </pattern>
+  </pattern>-->
 
-
-<!-- Wenn es nur 1 Contributor gibt -->
-  <pattern id="Bios3"> 
-    <!-- Texte unterscheiden sich -->
-    <rule role="information"
+<!--
+<!-\- Wenn es nur 1 Contributor gibt -\->
+  <pattern id="Bios3a"> <!-\- Bios 3a und Bios1 (und Bios2) ergeben das gleiche! -\->
+    <!-\- Texte unterscheiden sich -\->
+    <rule role="warning"
       context="product[count(contributor) = 1]/othertext[d102 = '13']/d104" >
       <report test="ancestor::product[1]/contributor/b044/normalize-space() != normalize-space(.)"
               diagnostics="dBios3"> 
@@ -75,13 +80,18 @@
         Die Angaben der Biografien unterscheiden sich.
        (Tag d102, Code 13, "A note referring to all contributors to a product – NOT linked to a single contributor"). 
       </report> 
-      <!-- Texte stimmen überein -->
-      <report test="ancestor::product[1]/contributor[b044]/b044/normalize-space() = normalize-space(.)" > 
-        Der Biografietext des einzigen Contributors stimmt mit dem Text für alle Contributoren (d102 Code 13) überein.
-        Das OtherText composite ist redundant und kann gelöscht werden. 
-        (Tag d102, Code 13, "A note referring to all contributors to a product – NOT linked to a single contributor").
-      </report>
     </rule>
+  </pattern >-->
+  
+  <pattern id="Bios3b"> <!-- Bios3b müsste das gleiche ergeben wie Bios6Hinweis - nein -->
+     <rule role="information"
+      context="product[count(contributor) = 1]/othertext[d102 = '13']/d104" >
+        <!-- Texte stimmen überein -->
+      <report test="ancestor::product[1]/contributor[b044]/b044/normalize-space() = normalize-space(.)" > 
+            Der Biografietext des einzigen Contributors stimmt mit dem Text für alle Contributoren überein.
+            Das OtherText composite mit der Biographical note ist redundant und kann gelöscht werden. 
+      </report>
+     </rule>
   </pattern>
   
   
@@ -90,7 +100,7 @@
     <rule role="error" 
           context="product[count(contributor[b035 = 'A01']) &gt; 1]/contributor[b035 = 'A01']/b044">
       <report test="ancestor::product[1][count(contributor[b035 = 'A01']) != count(contributor[b035 = 'A01']/b044)]" > 
-        Es gibt ungleiche viele Autoren und Biografien (Tag b044). Dies kann zu Fehlern in der Biographical note im OtherText composite (Tag d102, Code 13) führen.
+        Es gibt ungleich viele Autoren und Biografien (Tag b044). Dies kann zu Fehlern in der Biographical note im OtherText composite führen.
       </report>
     </rule>
   </pattern>
@@ -102,22 +112,24 @@
                [contributor/b044]
                /othertext[d102 = '13']/d104">
       <report test="ancestor::product[1]/contributor[b044]/b044/normalize-space() = normalize-space(.)" > 
-        Der Biografietext eines Contributors stimmt mit dem Text für alle Contributoren (d102 Code 13) überein. 
-        Es sollte aber um mehrere Contributoren gehen. (Falsche Verwendung)
+        Der Biografietext eines Contributors stimmt mit dem Text für alle Contributoren im OtherText composite überein. 
+        Es sollte im OtherText composite aber um mehrere Contributoren gehen.
+        (Der Biografietext im OtherText composite sollte gelöscht werden.)
       </report>
     </rule>
   </pattern>
 
   <pattern id="Spaces">
     <rule role="warning" context="d104 | b044" >
-      <let name="Punkt-RegEx" value="'(\p{L}?\p{L}\p{Ll})[.!]+\p{Lu}\.?'"/> <!--Fragezeichen entfernt, ist bei "KodierungsFehler" enthalten-->
+    <let name="Punkt-RegEx" value="'(\p{Lu}?\p{L}*\p{Ll})[.:!?]\p{Lu}\w*'"/>
+      <!--<let name="Punkt-RegEx" value="'(\p{L}?\p{L}\p{Ll})[.!?]+\p{Lu}\w?'"/>--> <!-- passt auch auf .?  z. B. St.?Ga-->
       <xsl:variable name="VPunkt" as="text()*">
         <xsl:analyze-string select="." regex="{$Punkt-RegEx}">
           <xsl:matching-substring>
             <xsl:if test="
                 not(regex-group(1) = 'www')
                 and
-                not(. = 'Ph.D.')">
+                not(. = 'Ph.D')and not(.='e.V') and not(.='a.D') and not(.='z.B')"> 
               <xsl:value-of select="."/>
             </xsl:if>
           </xsl:matching-substring>
@@ -140,7 +152,7 @@
           return
           replace(replace($t, '\.', '(\\.|\\w+)'), '\?', '\\?'), ' ')"/>
       <assert test="contains(., $b036) or contains(., $firstLast) or matches(., $b036-regex)"> 
-        Der Name des Contributors muss in der Biographical note vorkommen und sollte mit dem angegebenen Namen ('<value-of select="ancestor::contributor/b036"/>')
+        Der Name des Contributors muss im Biografietext vorkommen und sollte mit dem angegebenen Namen ('<value-of select="ancestor::contributor/b036"/>')
         übereinstimmen. 
       </assert>
       <!--reicht nur erster Name und Nachname (Info)? Sonderzeichen/Umlaute?
@@ -165,9 +177,9 @@
     <rule role="warning" context="b062">
       <!--<report test="matches(., '^\d+$')"> a </report>
       <report test=". castable as xs:integer"> b </report>-->
-      <report test="string(number(.)) != 'NaN'" 
-              diagnostics="NumberOfIllustrations"> 
-        In Illustrations note steht nur eine Nummer, obwohl hier eine Anmerkung stehen soll. 
+      <report test="string(number(.)) != 'NaN'" > 
+        In Illustrations note steht nur eine Nummer, obwohl hier eine Anmerkung stehen soll.
+        (Die Zahl passt besser in NumberOfIllustrations (Tag b125)).
       </report>
     </rule>
   </pattern>
@@ -187,18 +199,6 @@
   </pattern>
 
 
-  <pattern id="SupplierWebsite">
-    <rule role="information" 
-      context="product/supplydetail/website[b367 = '33']/b295">
-      <report test="./text() = ancestor::product/publisher/website[b367 = '01']/b295/text()"
-              diagnostics="dSupplierWebsite"> 
-        Code 33 (List 73) ist redundant: "Eine Unternehmenswebsite, die von einem Händler oder einem anderen Lieferanten (nicht dem Publisher) betrieben wird."
-      </report>
-    </rule>
-  </pattern>
-  <!-- &#x2013;&#8220;“   \p{Zs}   \t \r \n\-->
-
-
   <pattern id="seitJahren">
     <rule role="information" context="b044 | othertext[d102 = '13']/d104">
       <report 
@@ -210,12 +210,13 @@
   </pattern>
 
 
-  <pattern id="Bindestrich2">
+  <pattern id="Bindestrich">
     <rule role="information" 
       context="product[language[b253 = '01'][b252 = 'ger']]//d104 |
                product[language[b253 = '01'][b252 = 'ger']]//b044">
       <let name="Bindestrich-Regex" value="'\p{L}?\p{Ll}+-\p{Ll}+'"/>
-      <xsl:variable name="VBindestrich" as="text()*">
+      <report test="matches(., $Bindestrich-Regex)"> 
+        <xsl:variable name="VBindestrich" as="text()*">
         <xsl:analyze-string select="." regex="{$Bindestrich-Regex}">
           <xsl:matching-substring>
             <xsl:if test="
@@ -227,19 +228,19 @@
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>
-      <report test="exists($VBindestrich)"> 
         Liegt eine fehlerhafte Worttrennung vor? Fundstelle(n): <xsl:value-of select="string-join($VBindestrich, ', ')"/>
       </report>
     </rule>
   </pattern>
 
 
-  <pattern id="dreiZeichen">
+  <pattern id="dreiIdentBuchstaben">
     <rule role="information" 
       context="title | subject | contributor | othertext/d104">
-      <let name="dreiIdentZeichen-Regex" value="'\p{L}*([a-zA-Z])\1\1+[\p{L}]*'"/>
-      <xsl:variable name="VdreiZeichen" as="text()*">
-        <xsl:analyze-string select="." regex="{$dreiIdentZeichen-Regex}">
+      <let name="dreiIdentBuchstaben-Regex" value="'[\p{L}]*([\p{L}])\1\1+[\p{L}]*'"/>  
+     <xsl:variable name="VdreiIdentBuchstaben" as="text()*">
+       <!-- hier xsl-Teil mit exists() über report lassen, sonst werden auch stellen von not(. = 'www') usw. angezeigt -->
+        <xsl:analyze-string select="." regex="{$dreiIdentBuchstaben-Regex}">
           <xsl:matching-substring>
             <xsl:if test="
                 not(. = 'www') and not(. = 'WWW')
@@ -252,9 +253,9 @@
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>
-      <report test="exists($VdreiZeichen)"> 
-        Es tauchen drei identische Buchstaben hintereinander auf. Prüfe, ob ein Rechtschreibfehler vorkommt! 
-        Fundstelle(n): <xsl:value-of select="string-join($VdreiZeichen, ', ')"/>
+      <report test="exists($VdreiIdentBuchstaben)"> 
+        Drei identische Buchstaben erscheinen hintereinander. Prüfe, ob ein Rechtschreibfehler vorliegt! 
+        Fundstelle(n): <xsl:value-of select="string-join($VdreiIdentBuchstaben, ', ')"/>
       </report>
     </rule>
   </pattern>
@@ -275,15 +276,15 @@
     <rule role="warning" 
       context="title | subject | contributor | othertext/d104" >
       <let name="ZahlFehler-Regex" value="'\d+[?]\d+'"/>
-      <xsl:variable name="VZahlFehler" as="text()*">
+      <report test="matches(., $ZahlFehler-Regex)"> 
+        <xsl:variable name="VZahlFehler" as="text()*">
         <xsl:analyze-string select="." regex="{$ZahlFehler-Regex}">
           <xsl:matching-substring>
               <xsl:value-of select="."/>
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>
-      <report test="exists($VZahlFehler)"> 
-        Es liegt in einer Zahl möglicherweise ein Fehler vor.  
+        In einer Zahl liegt möglicherweise ein Fehler vor.  
         Fundstelle(n): <xsl:value-of select="string-join($VZahlFehler, ', ')" />
       </report>
     </rule>
@@ -295,56 +296,122 @@
   <pattern id="UmlautFehler">
     <rule role="warning" 
       context="title | subject | contributor | othertext/d104">
-      <let name="UmlautFehler-Regex" value="'[\p{L}]*[aouAOU][?][a-z][\p{L}]*'"/>
-      <xsl:variable name="VUmlautFehler" as="text()*">
+      <let name="UmlautFehler-Regex" value="'[\p{L}]*[aouAOU][?][a-z][\p{L}]*'"/>  
+      <report test="matches(., $UmlautFehler-Regex)">
+        <xsl:variable name="VUmlautFehler" as="text()*">
         <xsl:analyze-string select="." regex="{$UmlautFehler-Regex}">
           <xsl:matching-substring>
               <xsl:value-of select="."/>
           </xsl:matching-substring>
         </xsl:analyze-string>
-      </xsl:variable> 
-      <report test="exists($VUmlautFehler)"> 
-        Es liegt möglicherweise ein Umlautfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VUmlautFehler, ', ')" />
+      </xsl:variable>
+        Möglicherweise liegt ein Umlautfehler vor. 
+        Fundstelle(n): <xsl:value-of select="string-join($VUmlautFehler, ', ')" />
       </report>
     </rule>
   </pattern>
   
-  
-   <pattern id="ZeichenFehlerFragezeichen">
+
+   <pattern id="FragezeichenInWort">
     <rule role="warning"
-      context="title | subject | contributor | othertext/d104" >
-      <let name="ZeichenFehlerFragezeichen-Regex" value="'(.{0,6})\s+[?](.{0,6})'"/>
-      <let name="ZeichenFehler1-Regex" value="'[\p{L}]*[b-np-tv-zB-NP-TV-Z][?][a-z][\p{L}]*'"/>
-      <xsl:variable name="VZeichenFehlerFragezeichen" as="text()*">
-        <xsl:analyze-string select="." regex="{$ZeichenFehlerFragezeichen-Regex}">
+      context="title | subject | contributor | othertext/d104" >     
+      <let name="FragezeichenInWort-Regex" value="'\p{L}+[^a^o^u^A^O^U][?][\p{Ll}]+'"/> 
+      <!--alt: '[\p{L}]*[b-np-tv-zäöüßB-NP-TV-ZAÖÜ][?][\p{Ll}]+' : äöüß waren noch ausgeschlossen
+       '[\p{L}]*[\p{Ll}]+[^(aou)]*[?][\p{Ll}]+' :  hat auch  alles?[...]?sehr   das ?limbische   d.?h angezeigt-->
+      <report test="matches(., $FragezeichenInWort-Regex, 's')"> 
+      <xsl:variable name="VFragezeichenInWort" as="text()*">
+        <xsl:analyze-string select="." regex="{$FragezeichenInWort-Regex}" flags="s"> <!-- flags="s" -->
           <xsl:matching-substring>
               <xsl:value-of select="."/>
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable> 
-      <report test="exists($VZeichenFehlerFragezeichen)"> 
-        In diesem Text liegen möglicherweise ein Zeichenfehler mit einem Whitespace vor.  
-        Fundstelle(n): <xsl:value-of select="string-join($VZeichenFehlerFragezeichen, ', ')" />
+        Möglicherweise liegt ein Zeichenfehler in einem Wort vor. 
+        Fundstelle(n): <xsl:value-of select="string-join($VFragezeichenInWort, ', ')" />
       </report>
-      <xsl:variable name="VZeichenFehler1" as="text()*">
-        <xsl:analyze-string select="." regex="{$ZeichenFehler1-Regex}">
-          <xsl:matching-substring>
-              <xsl:value-of select="."/>
-          </xsl:matching-substring>
-        </xsl:analyze-string>
-      </xsl:variable> 
-      <report test="exists($VZeichenFehler1)"> 
-        Es liegt möglicherweise ein Zeichenfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VZeichenFehler1, ', ')" />
-      </report>      
     </rule>
    </pattern>
   
+<pattern id="SpaceFragezeichen">
+      <rule role="warning"
+      context="title | subject | contributor | othertext/d104" >
+<!--  alt:   <let name="SpaceFragezeichen-Regex" value="'(.{0,6})\s+[?](.{0,6})'"/> -->
+        <let name="SpaceFragezeichen-Regex" value="'\w*\s+[?]\s\w*'"/>
+        <report  test="matches(., $SpaceFragezeichen-Regex, 's')"> <!-- Bsp  passt -->
+        <xsl:variable name="VSpaceFragezeichen" as="text()*">
+        <xsl:analyze-string select="." regex="{$SpaceFragezeichen-Regex}" flags="s">
+          <xsl:matching-substring>
+              <xsl:value-of select="."/>
+          </xsl:matching-substring>
+        </xsl:analyze-string>
+      </xsl:variable>
+        Möglicherweise liegt ein Zeichenfehler mit einem Whitespace vor.  
+        Fundstelle(n): <xsl:value-of select="string-join($VSpaceFragezeichen, ', ')" />
+      </report>
+      </rule>
+</pattern>
+
+<pattern id="weitereKodierungsFehler">
+  <rule role="warning"
+    context="othertext/d104"> <!-- nur OtherText -->
+    
+    <let name="weitereKodierungsFehler-Regex" value="'\d+[?]\p{Ll}+'"/>
+    <!-- Zahl Fragezeichen Buchstabe, z. B. 113?ff -->
+    <report test="matches(., $weitereKodierungsFehler-Regex)">
+    <xsl:variable name="VwkF" as="text()*">
+        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler-Regex}">
+          <xsl:matching-substring>
+              <xsl:value-of select="."/>
+          </xsl:matching-substring>
+        </xsl:analyze-string>
+      </xsl:variable>  
+     A: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF, ', ')" />
+    </report>
+    
+    <let name="weitereKodierungsFehler2-Regex" value="'\w*[/§]+[?][\P{Ll}]\w*'"/>   
+    <!-- nach Sonderzeichen (außer Punkt) kommt Fragezeichen und danach alles außer kl. Buchstabe  -->
+    <!--<let name="weitereKodierungsFehler2-Regex" value="'\w*(\p{Pe}|\p{Po})+[?]\w*'"/>-->   
+    <report test="matches(., $weitereKodierungsFehler2-Regex )">
+    <xsl:variable name="VwkF2" as="text()*">
+        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler2-Regex}">
+          <xsl:matching-substring>
+              <xsl:value-of select="."/>
+          </xsl:matching-substring>
+        </xsl:analyze-string>
+      </xsl:variable>  
+     B: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF2, ', ')" />      
+    </report>
+    
+     <let name="weitereKodierungsFehler3-Regex" value="'\w*[/.§%]+[?]\p{Ll}+\w*'"/> 
+    <!-- nach Sonderzeichen kommt Fragezeichen und danach kleiner Buchstabe (id="Spaces" Großbuchstaben ausschließen) -->
+    <report test="matches(., $weitereKodierungsFehler3-Regex )">
+    <xsl:variable name="VwkF3" as="text()*">
+        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler3-Regex}">
+          <xsl:matching-substring>
+              <xsl:value-of select="."/>
+          </xsl:matching-substring>
+        </xsl:analyze-string>
+      </xsl:variable>  
+     C: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF3, ', ')" />      
+      
+    </report>
+    
+  </rule>
+</pattern>
+
+  <!--<pattern id="SupplierWebsite">
+    <rule role="information" 
+      context="product/supplydetail/website[b367 = '33']/b295">
+      <report test="./text() = ancestor::product/publisher/website[b367 = '01']/b295/text()"
+              diagnostics="dSupplierWebsite"> 
+        Code 33 (List 73) ist redundant: "Eine Unternehmenswebsite, die von einem Händler oder einem anderen Lieferanten (nicht dem Publisher) betrieben wird."
+      </report>
+    </rule>
+  </pattern>-->
+  <!-- &#x2013;&#8220;“   \p{Zs}   \t \r \n\-->
 
 
   <diagnostics>
-    <diagnostic id="NumberOfIllustrations">Die Zahl passt besser in NumberOfIllustrations (Tag b125).</diagnostic>
-    <diagnostic id="dBios2">Tag b044 sollte die Einzelbiographie enthalten.</diagnostic>
-    <diagnostic id="dBios3">Tag b044 sollte die Einzelbiographie enthalten.</diagnostic>
     <diagnostic id="dBioURL">Nutze dafür das Website composite. </diagnostic>
     <diagnostic id="dSupplierWebsite">Tag b367 mit Code 01 ist für die Publisher-Website vorgesehen. </diagnostic>
     <diagnostic id="TOC">Nutze bei Tag d102 den Code 02 und überführe das TOC in eine HTML-Struktur.</diagnostic>
