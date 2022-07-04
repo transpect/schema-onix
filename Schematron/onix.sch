@@ -3,9 +3,8 @@
 <schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2"
   xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
-  <phase id="test">
-    <active pattern="SpaceFragezeichen"/>
-<!--    <active pattern="Bios3b"/>-->
+  <phase id="Test">
+    <active pattern="weitereKodierungsFehler"/>
   </phase>
 
   <phase id="BiografieFehler">
@@ -22,7 +21,6 @@
     <active pattern="Spaces"/>
     <active pattern="UmlautFehler"/>
     <active pattern="ZahlFehler"/>
-    <active pattern="FragezeichenInWort"/>
     <active pattern="SpaceFragezeichen"/>
     <active pattern="weitereKodierungsFehler"/>
   </phase>
@@ -40,9 +38,9 @@
     <active pattern="SupplierWebsite"/>
   </phase>-->
 
-<!--nur ein Contributor, egal welche Rolle (kürzere Formulierung als Bios2)-->
+
+  <!-- Nur ein Contributor (egal welche Rolle), Texte unterscheiden sich -->
   <pattern id="Bios1">
-  <!-- Texte unterscheiden sich -->
     <rule role="error" context="
         product[count(contributor) = 1]
                [contributor/b044]
@@ -55,38 +53,10 @@
   </pattern>
 
 
-<!--  <pattern id="Bios2">
-    <rule role="error" context="
-        product[count(contributor[b035 = 'A01']) = 1]
-        [count(contributor[not(b035 = 'A01')]) = 0]
-        [contributor[b035 = 'A01'][b044]]
-        /othertext[d102 = '13']/d104">
-      <assert test="ancestor::product[1]/contributor[b044]/b044/normalize-space() = normalize-space(.)" 
-              diagnostics="Bios2"> 
-        Es gibt nur einen Autor (und keine weiteren Contributoren) und dessen Biografietext weicht vom Text für alle Contributoren ab.
-      </assert>
-    </rule>
-  </pattern>-->
-
-<!--
-<!-\- Wenn es nur 1 Contributor gibt -\->
-  <pattern id="Bios3a"> <!-\- Bios 3a und Bios1 (und Bios2) ergeben das gleiche! -\->
-    <!-\- Texte unterscheiden sich -\->
-    <rule role="warning"
-      context="product[count(contributor) = 1]/othertext[d102 = '13']/d104" >
-      <report test="ancestor::product[1]/contributor/b044/normalize-space() != normalize-space(.)"
-              diagnostics="dBios3"> 
-        Wenn es nur einen Contributor gibt, benötigt es keine Biographical note. 
-        Die Angaben der Biografien unterscheiden sich.
-       (Tag d102, Code 13, "A note referring to all contributors to a product – NOT linked to a single contributor"). 
-      </report> 
-    </rule>
-  </pattern >-->
-  
-  <pattern id="Bios3b"> <!-- Bios3b müsste das gleiche ergeben wie Bios6Hinweis - nein -->
+  <!-- Nur ein Contributor, Texte stimmen überein -->
+  <pattern id="Bios3b">
      <rule role="information"
       context="product[count(contributor) = 1]/othertext[d102 = '13']/d104" >
-        <!-- Texte stimmen überein -->
       <report test="ancestor::product[1]/contributor[b044]/b044/normalize-space() = normalize-space(.)" > 
             Der Biografietext des einzigen Contributors stimmt mit dem Text für alle Contributoren überein.
             Das OtherText composite mit der Biographical note ist redundant und kann gelöscht werden. 
@@ -95,6 +65,8 @@
   </pattern>
   
   
+
+  <!-- Mehrere Contributoren mit Autorenrolle, aber nicht jeder hat eine Einzelbiografie -->
   <!--Fall vermeiden, dass es z.B. 2 Autoren gibt und nur einer eine Bio hat, die in die Gesamtbio kommt-->
   <pattern id="Bios4">
     <rule role="error" 
@@ -105,7 +77,7 @@
     </rule>
   </pattern>
   
-  
+  <!-- Mehr als ein Contributor, einer davon hat einen Text und dieser stimmt mit Gesamtbiografie überein (falsche Verwendung)-->
   <pattern id="Bios6Hinweis">
     <rule role="info" context="
         product[count(contributor) &gt; 1]
@@ -119,10 +91,10 @@
     </rule>
   </pattern>
 
+<!-- Fehlendes Leerzeichen zwischen zwei Sätzen -->
   <pattern id="Spaces">
     <rule role="warning" context="d104 | b044" >
     <let name="Punkt-RegEx" value="'(\p{Lu}?\p{L}*\p{Ll})[.:!?]\p{Lu}\w*'"/>
-      <!--<let name="Punkt-RegEx" value="'(\p{L}?\p{L}\p{Ll})[.!?]+\p{Lu}\w?'"/>--> <!-- passt auch auf .?  z. B. St.?Ga-->
       <xsl:variable name="VPunkt" as="text()*">
         <xsl:analyze-string select="." regex="{$Punkt-RegEx}">
           <xsl:matching-substring>
@@ -141,7 +113,7 @@
     </rule>
   </pattern>
 
-
+  <!-- angegebener Name unterscheidet sich bei Name und Einzelbiografie -->
   <pattern id="BioName">
     <rule role="error" context="b044" >
       <let name="b036" value="ancestor::contributor/b036/normalize-space()"/>
@@ -161,30 +133,29 @@
     </rule>
   </pattern>
 
-
+  <!-- in einer Biografie steht URL, das kann zu Fehlern in Verarbeitung führen -->
   <pattern id="BioURL">
     <rule role="warning" context="b044">
-      <report test="contains(., 'www.') or contains(., '.de') or contains(., '.com')"
-              diagnostics="dBioURL" > 
+      <report test="contains(., 'www.') or contains(., '.de') or contains(., '.com')" > 
         Eine URL sollte nicht in einer Biographical note stehen.
+        Vorschlag: Nutze dafür das Website composite.
       </report>
     </rule>
   </pattern>
-  <!--b044 Some recipients of ONIX data feeds will not accept text which has embedded URLs. A contributor website link can be sent using the <Website> composite.-->
-
-
+  
+  <!-- IllustrationsNote ist für Anmerkungen da -->
   <pattern id="illustrationsNote">
     <rule role="warning" context="b062">
       <!--<report test="matches(., '^\d+$')"> a </report>
       <report test=". castable as xs:integer"> b </report>-->
       <report test="string(number(.)) != 'NaN'" > 
         In Illustrations note steht nur eine Nummer, obwohl hier eine Anmerkung stehen soll.
-        (Die Zahl passt besser in NumberOfIllustrations (Tag b125)).
+        Vorschlag: Überführe die Zahl in Tag b125 (NumberOfIllustrations).
       </report>
     </rule>
   </pattern>
 
-
+ <!-- Platz für Empfehlungen; hier aus der Dokumentation -->
   <pattern id="suggestedLength">
     <rule role="information" context="b336">
       <report test="./string-length() &gt; 100"> 
@@ -198,36 +169,36 @@
     </rule>
   </pattern>
 
-
+  <!-- Empfehlung bei seit ... Jahren -->
   <pattern id="seitJahren">
     <rule role="information" context="b044 | othertext[d102 = '13']/d104">
       <report 
-        test="matches(., 'seit[\p{Zs}\s]+(\d+|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)[\p{Zs}\s]+Jahren', 'i')" 
-        diagnostics="dseitJahren" > 
-        Die Information in der Bio kann veraltet sein. 
+        test="matches(., 'seit[\p{Zs}\s]+(\d+|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)[\p{Zs}\s]+Jahren', 'i')" > 
+        Die Information in der Bio kann veraltet sein. Vorschlag: "seit dem Jahr ..." oder " seit über ... Jahren".
       </report>
     </rule>
   </pattern>
 
-
+  <!-- Fehlerhafte Worttrennung -->
   <pattern id="Bindestrich">
     <rule role="information" 
       context="product[language[b253 = '01'][b252 = 'ger']]//d104 |
                product[language[b253 = '01'][b252 = 'ger']]//b044">
       <let name="Bindestrich-Regex" value="'\p{L}?\p{Ll}+-\p{Ll}+'"/>
-      <report test="matches(., $Bindestrich-Regex)"> 
+      <!-- hier xsl-Teil mit exists() über report lassen, sonst werden auch stellen von not(. = '...') usw. angezeigt -->
         <xsl:variable name="VBindestrich" as="text()*">
         <xsl:analyze-string select="." regex="{$Bindestrich-Regex}">
           <xsl:matching-substring>
             <xsl:if test="
-                not(. = 'öffentlich-rechtlich') and not(. = 'Start-up')
-                and
-                not(. = 'Know-how') and not(. = 'deutsch-')">
+                not(. = 'Start-ups') and not(. = 'Start-up')
+            and not(. = 'deutsch') 
+            and not(. = 'Know-how') and not(. = 'öffentlich-rechtlich')">
               <xsl:value-of select="."/>
             </xsl:if>
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>
+      <report test="exists($VBindestrich)"> 
         Liegt eine fehlerhafte Worttrennung vor? Fundstelle(n): <xsl:value-of select="string-join($VBindestrich, ', ')"/>
       </report>
     </rule>
@@ -254,24 +225,24 @@
         </xsl:analyze-string>
       </xsl:variable>
       <report test="exists($VdreiIdentBuchstaben)"> 
-        Drei identische Buchstaben erscheinen hintereinander. Prüfe, ob ein Rechtschreibfehler vorliegt! 
+        Drei identische Buchstaben erscheinen hintereinander. Liegt ein Rechtschreibfehler vor? 
         Fundstelle(n): <xsl:value-of select="string-join($VdreiIdentBuchstaben, ', ')"/>
       </report>
     </rule>
   </pattern>
 
-
+  <!-- Hinweis, dass es ein IHV im Default text format gibt -->
   <pattern id="tocDefaultTextFormat">
     <rule role="information"
       context="othertext[d102 = '04'][d103 = '06']/d104">
-      <report test="exists(.)" 
-              diagnostics="TOC"> 
-        Das TOC könnte auf eine Website übernommen werden und so seine Struktur verlieren. 
+      <report test="exists(.)" >
+        Das TOC könnte auf eine Website übernommen werden und so seine Struktur verlieren.
+        Vorschlag: Nutze bei Tag d102 den Code 02 und überführe das TOC in eine HTML-Struktur.
       </report>
     </rule>
   </pattern>
 
-  
+<!-- Kodierungsfehler in Zahl, Bsp.: 200?000 -->
 <pattern id="ZahlFehler">
     <rule role="warning" 
       context="title | subject | contributor | othertext/d104" >
@@ -292,11 +263,11 @@
   
     <!--Idee: SQF bei ZahlFehler: Fragezeichen entweder zu Punkt machen, löschen oder in engl. Texten zu Komma machen-->
 
-  
+  <!-- nach a o u kommt ein Fragezeichen, Bsp.: fu?r -->
   <pattern id="UmlautFehler">
     <rule role="warning" 
       context="title | subject | contributor | othertext/d104">
-      <let name="UmlautFehler-Regex" value="'[\p{L}]*[aouAOU][?][a-z][\p{L}]*'"/>  
+      <let name="UmlautFehler-Regex" value="'\w*[aouAOU][?][a-z]\w*'"/>  
       <report test="matches(., $UmlautFehler-Regex)">
         <xsl:variable name="VUmlautFehler" as="text()*">
         <xsl:analyze-string select="." regex="{$UmlautFehler-Regex}">
@@ -311,33 +282,13 @@
     </rule>
   </pattern>
   
-
-   <pattern id="FragezeichenInWort">
-    <rule role="warning"
-      context="title | subject | contributor | othertext/d104" >     
-      <let name="FragezeichenInWort-Regex" value="'\p{L}+[^a^o^u^A^O^U][?][\p{Ll}]+'"/> 
-      <!--alt: '[\p{L}]*[b-np-tv-zäöüßB-NP-TV-ZAÖÜ][?][\p{Ll}]+' : äöüß waren noch ausgeschlossen
-       '[\p{L}]*[\p{Ll}]+[^(aou)]*[?][\p{Ll}]+' :  hat auch  alles?[...]?sehr   das ?limbische   d.?h angezeigt-->
-      <report test="matches(., $FragezeichenInWort-Regex, 's')"> 
-      <xsl:variable name="VFragezeichenInWort" as="text()*">
-        <xsl:analyze-string select="." regex="{$FragezeichenInWort-Regex}" flags="s"> <!-- flags="s" -->
-          <xsl:matching-substring>
-              <xsl:value-of select="."/>
-          </xsl:matching-substring>
-        </xsl:analyze-string>
-      </xsl:variable> 
-        Möglicherweise liegt ein Zeichenfehler in einem Wort vor. 
-        Fundstelle(n): <xsl:value-of select="string-join($VFragezeichenInWort, ', ')" />
-      </report>
-    </rule>
-   </pattern>
-  
-<pattern id="SpaceFragezeichen">
+  <!-- vor einem Fragezeichen ist ein Whitespace und danach folgt *keine Ziffer oder kein Buchstabe*
+       Bsp.: 2018 ? 1 -->
+  <pattern id="SpaceFragezeichen">
       <rule role="warning"
       context="title | subject | contributor | othertext/d104" >
-<!--  alt:   <let name="SpaceFragezeichen-Regex" value="'(.{0,6})\s+[?](.{0,6})'"/> -->
-        <let name="SpaceFragezeichen-Regex" value="'\w*\s+[?]\s\w*'"/>
-        <report  test="matches(., $SpaceFragezeichen-Regex, 's')"> <!-- Bsp  passt -->
+        <let name="SpaceFragezeichen-Regex" value="'\w*\s[?]\W\w*'"/>
+        <report  test="matches(., $SpaceFragezeichen-Regex, 's')">
         <xsl:variable name="VSpaceFragezeichen" as="text()*">
         <xsl:analyze-string select="." regex="{$SpaceFragezeichen-Regex}" flags="s">
           <xsl:matching-substring>
@@ -349,28 +300,31 @@
         Fundstelle(n): <xsl:value-of select="string-join($VSpaceFragezeichen, ', ')" />
       </report>
       </rule>
-</pattern>
+   </pattern>
 
+<!-- drei weitere Kodierungsfehler mit Fragezeichen; dabei sind die vorherigen Fehler ausgeschlossen.
+    Fundstellen nur in OtherText -->
 <pattern id="weitereKodierungsFehler">
   <rule role="warning"
-    context="othertext/d104"> <!-- nur OtherText -->
+    context="othertext/d104">
     
-    <let name="weitereKodierungsFehler-Regex" value="'\d+[?]\p{Ll}+'"/>
-    <!-- Zahl Fragezeichen Buchstabe, z. B. 113?ff -->
-    <report test="matches(., $weitereKodierungsFehler-Regex)">
-    <xsl:variable name="VwkF" as="text()*">
-        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler-Regex}">
+<!--    <!-\-A: nach einem Zeichen *außer aou* kommt direkt ein Fragezeichen und danach ein kleiner Buchstabe
+      Bsp.: 113?ff -\->
+    <let name="weitereKodierungsFehler1-Regex" value="'\w*.[^a^o^u^A^O^U][?]\p{Ll}+'"/> 
+    <report test="matches(., $weitereKodierungsFehler1-Regex)">
+    <xsl:variable name="VwkF1" as="text()*">
+        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler1-Regex}">
           <xsl:matching-substring>
               <xsl:value-of select="."/>
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>  
-     A: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF, ', ')" />
+     A: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF1, ', ')" />
     </report>
-    
-    <let name="weitereKodierungsFehler2-Regex" value="'\w*[/§]+[?][\P{Ll}]\w*'"/>   
-    <!-- nach Sonderzeichen (außer Punkt) kommt Fragezeichen und danach alles außer kl. Buchstabe  -->
-    <!--<let name="weitereKodierungsFehler2-Regex" value="'\w*(\p{Pe}|\p{Po})+[?]\w*'"/>-->   
+   
+     <!-\-B: nach einem Punkt kommt direkt ein Fragezeichen und danach ein Großbuchstabe.
+    leicht anders, als "Spaces", Bsp.: St.?Gallen -\->
+    <let name="weitereKodierungsFehler2-Regex" value="'\w*\.[?]\p{Lu}+'"/>  
     <report test="matches(., $weitereKodierungsFehler2-Regex )">
     <xsl:variable name="VwkF2" as="text()*">
         <xsl:analyze-string select="." regex="{$weitereKodierungsFehler2-Regex}">
@@ -380,10 +334,12 @@
         </xsl:analyze-string>
       </xsl:variable>  
      B: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF2, ', ')" />      
-    </report>
+    </report>-->
     
-     <let name="weitereKodierungsFehler3-Regex" value="'\w*[/.§%]+[?]\p{Ll}+\w*'"/> 
-    <!-- nach Sonderzeichen kommt Fragezeichen und danach kleiner Buchstabe (id="Spaces" Großbuchstaben ausschließen) -->
+    
+    <!--C: nach einem Zeichen *außer einer Ziffer* kommt direkt ein Fragezeichen und danach eine Ziffer (1?00 ausschließen)
+    Bsp.: §?175   kann?10 S.?75-->
+    <let name="weitereKodierungsFehler3-Regex" value="'.?\D[?]\d+'"/> 
     <report test="matches(., $weitereKodierungsFehler3-Regex )">
     <xsl:variable name="VwkF3" as="text()*">
         <xsl:analyze-string select="." regex="{$weitereKodierungsFehler3-Regex}">
@@ -392,13 +348,13 @@
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>  
-     C: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF3, ', ')" />      
-      
+     C: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF3, ', ')" />        
     </report>
     
   </rule>
 </pattern>
 
+<!-- im Tag für die Händler/Lieferantenwebsite steht der Link des Publishers (falsche Verwendung; Tag wird durchgehend genutzt) -->
   <!--<pattern id="SupplierWebsite">
     <rule role="information" 
       context="product/supplydetail/website[b367 = '33']/b295">
@@ -411,10 +367,7 @@
   <!-- &#x2013;&#8220;“   \p{Zs}   \t \r \n\-->
 
 
-  <diagnostics>
-    <diagnostic id="dBioURL">Nutze dafür das Website composite. </diagnostic>
+<!--  <diagnostics>
     <diagnostic id="dSupplierWebsite">Tag b367 mit Code 01 ist für die Publisher-Website vorgesehen. </diagnostic>
-    <diagnostic id="TOC">Nutze bei Tag d102 den Code 02 und überführe das TOC in eine HTML-Struktur.</diagnostic>
-    <diagnostic id="dseitJahren">Besser wäre "seit dem Jahr ..." oder " seit über ... Jahren".</diagnostic>
-  </diagnostics>
+  </diagnostics>-->
 </schema>
