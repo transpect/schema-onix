@@ -4,7 +4,7 @@
   xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <phase id="Test">
-    <active pattern="weitereKodierungsFehler"/>
+    <active pattern="SubtitleAuflage"/>
   </phase>
 
   <phase id="BiografieFehler">
@@ -16,9 +16,9 @@
   <phase id="TextFehler">
     <active pattern="dreiIdentBuchstaben"/>
     <active pattern="Bindestrich"/>
+    <active pattern="Spaces"/>
   </phase>
   <phase id="KodierungsFehler">
-    <active pattern="Spaces"/>
     <active pattern="UmlautFehler"/>
     <active pattern="ZahlFehler"/>
     <active pattern="SpaceFragezeichen"/>
@@ -33,6 +33,8 @@
     <active pattern="suggestedLength"/>
     <active pattern="tocDefaultTextFormat"/>
     <active pattern="seitJahren"/>
+    <active pattern="SubtitleAuflage"/>
+    <active pattern="SubtitleErweiterung"/>
   </phase>
   <!--<phase id="Redudanzen">
     <active pattern="SupplierWebsite"/>
@@ -91,7 +93,7 @@
     </rule>
   </pattern>
 
-<!-- Fehlendes Leerzeichen zwischen zwei Sätzen -->
+<!-- Fehlendes Leerzeichen zwischen zwei Sätzen, Bsp.: Buch:Wer -->
   <pattern id="Spaces">
     <rule role="warning" context="d104 | b044" >
     <let name="Punkt-RegEx" value="'(\p{Lu}?\p{L}*\p{Ll})[.:!?]\p{Lu}\w*'"/>
@@ -155,7 +157,8 @@
     </rule>
   </pattern>
 
- <!-- Platz für Empfehlungen; hier aus der Dokumentation -->
+ <!-- Empfehlungen für Zeichenlängen in best. Elementen; hier aus der Dokumentation -->
+  <!-- individuelle Empfehlungen oder Wünsche auch mgl. -->
   <pattern id="suggestedLength">
     <rule role="information" context="b336">
       <report test="./string-length() &gt; 100"> 
@@ -174,12 +177,12 @@
     <rule role="information" context="b044 | othertext[d102 = '13']/d104">
       <report 
         test="matches(., 'seit[\p{Zs}\s]+(\d+|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)[\p{Zs}\s]+Jahren', 'i')" > 
-        Die Information in der Bio kann veraltet sein. Vorschlag: "seit dem Jahr ..." oder " seit über ... Jahren".
+        Die Information in der Biografie kann veraltet sein. Vorschlag: "seit dem Jahr ..." oder " seit über ... Jahren".
       </report>
     </rule>
   </pattern>
 
-  <!-- Fehlerhafte Worttrennung -->
+  <!-- Fehlerhafte Worttrennung, Bsp.: be-nutzen -->
   <pattern id="Bindestrich">
     <rule role="information" 
       context="product[language[b253 = '01'][b252 = 'ger']]//d104 |
@@ -204,7 +207,7 @@
     </rule>
   </pattern>
 
-
+<!-- drei ident. Buchstaben hintereinander, Bsp.: solllte -->
   <pattern id="dreiIdentBuchstaben">
     <rule role="information" 
       context="title | subject | contributor | othertext/d104">
@@ -308,8 +311,8 @@
   <rule role="warning"
     context="othertext/d104">
     
-<!--    <!-\-A: nach einem Zeichen *außer aou* kommt direkt ein Fragezeichen und danach ein kleiner Buchstabe
-      Bsp.: 113?ff -\->
+    <!--A: nach einem Zeichen *außer aou* kommt direkt ein Fragezeichen und danach ein kleiner Buchstabe
+      Bsp.: 113?ff -->
     <let name="weitereKodierungsFehler1-Regex" value="'\w*.[^a^o^u^A^O^U][?]\p{Ll}+'"/> 
     <report test="matches(., $weitereKodierungsFehler1-Regex)">
     <xsl:variable name="VwkF1" as="text()*">
@@ -322,8 +325,8 @@
      A: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF1, ', ')" />
     </report>
    
-     <!-\-B: nach einem Punkt kommt direkt ein Fragezeichen und danach ein Großbuchstabe.
-    leicht anders, als "Spaces", Bsp.: St.?Gallen -\->
+     <!--B: nach einem Punkt kommt direkt ein Fragezeichen und danach ein Großbuchstabe.
+    leicht anders, als "Spaces", Bsp.: St.?Gallen -->
     <let name="weitereKodierungsFehler2-Regex" value="'\w*\.[?]\p{Lu}+'"/>  
     <report test="matches(., $weitereKodierungsFehler2-Regex )">
     <xsl:variable name="VwkF2" as="text()*">
@@ -334,7 +337,7 @@
         </xsl:analyze-string>
       </xsl:variable>  
      B: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF2, ', ')" />      
-    </report>-->
+    </report>
     
     
     <!--C: nach einem Zeichen *außer einer Ziffer* kommt direkt ein Fragezeichen und danach eine Ziffer (1?00 ausschließen)
@@ -366,6 +369,27 @@
   </pattern>-->
   <!-- &#x2013;&#8220;“   \p{Zs}   \t \r \n\-->
 
+<!-- Die Auflage steht im Untertitel-Segment, 
+    Bsp.: 2., aktualisierte Auflage -->
+<pattern id="SubtitleAuflage">
+  <rule role="information" context="b029">
+    <report test="contains(., 'Auflage')">
+      Im Subtitle steht die Auflage. 
+      Vorschlag: Überführe den Text besser in Tag b058 (EditionStatement).
+    </report>
+  </rule>
+</pattern>
+  
+  <!-- im Untertitel-Segment stehen evtl. Marketinginformationen,
+  Bsp.: How to Transform Your Organization from the Inside Out, plus E-Book inside (ePub, mobi oder pdf)-->
+  <pattern id="SubtitleErweiterung">
+  <rule role="information" context="b029">
+    <report test="contains(., 'Book')">
+      Im Subtitle stehen möglicherweise zusätzliche Marketinginformationen. 
+      Vorschlag: Überführe die Information in ein OtherText composite (z.B. mit Tag d102, Code 19 (Feature)).
+    </report>
+  </rule>
+</pattern>
 
 <!--  <diagnostics>
     <diagnostic id="dSupplierWebsite">Tag b367 mit Code 01 ist für die Publisher-Website vorgesehen. </diagnostic>
