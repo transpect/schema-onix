@@ -3,8 +3,8 @@
 <schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2"
   xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
-  <phase id="Test">
-    <active pattern="SubtitleAuflage"/>
+  <phase id="EinzelTest">
+    <active pattern="ZahlFehler"/>
   </phase>
 
   <phase id="BiografieFehler">
@@ -39,6 +39,7 @@
   <!--<phase id="Redudanzen">
     <active pattern="SupplierWebsite"/>
   </phase>-->
+
 
 
   <!-- Nur ein Contributor (egal welche Rolle), Texte unterscheiden sich -->
@@ -93,17 +94,16 @@
     </rule>
   </pattern>
 
-<!-- Fehlendes Leerzeichen zwischen zwei Sätzen, Bsp.: Buch:Wer -->
+<!-- Fehlendes Leerzeichen zwischen zwei Sätzen, Bsp.: Buch:Wer
+  Spaces mit exists--> <!-- Nr. 1: d104 | b044 ; Nr. 2: ONIXmessage/product/othertext/d104 | ONIXmessage/product/contributor/b044 ;
+  Nr. 3: ONIXmessage/product[contributor/b044|othertext/d104] Nr. 4: nur product, so gibt es weniger Fehlermeldungen-Anzahl-->
   <pattern id="Spaces">
     <rule role="warning" context="d104 | b044" >
-    <let name="Punkt-RegEx" value="'(\p{Lu}?\p{L}*\p{Ll})[.:!?]\p{Lu}\w*'"/>
-      <xsl:variable name="VPunkt" as="text()*">
-        <xsl:analyze-string select="." regex="{$Punkt-RegEx}">
+    <let name="Punkt-Regex" value="'\w*\p{Ll}[.:!?]\p{Lu}\w*'"/>
+      <xsl:variable name="VPunkt" as="xs:string*">
+        <xsl:analyze-string select="." regex="{$Punkt-Regex}">
           <xsl:matching-substring>
-            <xsl:if test="
-                not(regex-group(1) = 'www')
-                and
-                not(. = 'Ph.D')and not(.='e.V') and not(.='a.D') and not(.='z.B')"> 
+            <xsl:if test="not(. = 'Ph.D')and not(.='e.V') and not(.='a.D') and not(.='z.B')"> 
               <xsl:value-of select="."/>
             </xsl:if>
           </xsl:matching-substring>
@@ -114,6 +114,7 @@
       </report>
     </rule>
   </pattern>
+  
 
   <!-- angegebener Name unterscheidet sich bei Name und Einzelbiografie -->
   <pattern id="BioName">
@@ -189,7 +190,7 @@
                product[language[b253 = '01'][b252 = 'ger']]//b044">
       <let name="Bindestrich-Regex" value="'\p{L}?\p{Ll}+-\p{Ll}+'"/>
       <!-- hier xsl-Teil mit exists() über report lassen, sonst werden auch stellen von not(. = '...') usw. angezeigt -->
-        <xsl:variable name="VBindestrich" as="text()*">
+        <xsl:variable name="VBindestrich" as="xs:string*">
         <xsl:analyze-string select="." regex="{$Bindestrich-Regex}">
           <xsl:matching-substring>
             <xsl:if test="
@@ -207,19 +208,19 @@
     </rule>
   </pattern>
 
-<!-- drei ident. Buchstaben hintereinander, Bsp.: solllte -->
+<!-- drei ident. Buchstaben hintereinander, Bsp.: solllte-->
   <pattern id="dreiIdentBuchstaben">
     <rule role="information" 
       context="title | subject | contributor | othertext/d104">
       <let name="dreiIdentBuchstaben-Regex" value="'[\p{L}]*([\p{L}])\1\1+[\p{L}]*'"/>  
-     <xsl:variable name="VdreiIdentBuchstaben" as="text()*">
-       <!-- hier xsl-Teil mit exists() über report lassen, sonst werden auch stellen von not(. = 'www') usw. angezeigt -->
-        <xsl:analyze-string select="." regex="{$dreiIdentBuchstaben-Regex}">
+     <xsl:variable name="VdreiIdentBuchstaben" as="xs:string*">
+       <!-- hier xsl-Teil mit exists() über report lassen, sonst werden auch Stellen von not(. = 'www') usw. angezeigt --> <!-- bei if müssen Groß- und Kleinbuchstaben extra erfasst werden. i bringt eig. nichts -->
+        <xsl:analyze-string select="." regex="{$dreiIdentBuchstaben-Regex}" flags="i">
           <xsl:matching-substring>
             <xsl:if test="
-                not(. = 'www') and not(. = 'WWW')
+                not(. = 'www') 
                 and
-                not(. = 'Hmmm') and not(. = '[Oo]ooh') and not(. = 'hmmm')
+                not(. = 'hmmm') and not(. = 'oooh') 
                 and
                 not(. = 'III') and not(. = 'VIII') and not(. = 'XIII')">
               <xsl:value-of select="."/>
@@ -233,6 +234,8 @@
       </report>
     </rule>
   </pattern>
+  
+
 
   <!-- Hinweis, dass es ein IHV im Default text format gibt -->
   <pattern id="tocDefaultTextFormat">
@@ -251,7 +254,7 @@
       context="title | subject | contributor | othertext/d104" >
       <let name="ZahlFehler-Regex" value="'\d+[?]\d+'"/>
       <report test="matches(., $ZahlFehler-Regex)"> 
-        <xsl:variable name="VZahlFehler" as="text()*">
+        <xsl:variable name="VZahlFehler" as="xs:string*"> <!-- + auch mgl. -->
         <xsl:analyze-string select="." regex="{$ZahlFehler-Regex}">
           <xsl:matching-substring>
               <xsl:value-of select="."/>
@@ -264,6 +267,11 @@
     </rule>
   </pattern>
   
+  <!-- K1 -->
+  <!-- K2 -->
+  <!-- K3-->
+  
+  
     <!--Idee: SQF bei ZahlFehler: Fragezeichen entweder zu Punkt machen, löschen oder in engl. Texten zu Komma machen-->
 
   <!-- nach a o u kommt ein Fragezeichen, Bsp.: fu?r -->
@@ -272,7 +280,7 @@
       context="title | subject | contributor | othertext/d104">
       <let name="UmlautFehler-Regex" value="'\w*[aouAOU][?][a-z]\w*'"/>  
       <report test="matches(., $UmlautFehler-Regex)">
-        <xsl:variable name="VUmlautFehler" as="text()*">
+        <xsl:variable name="VUmlautFehler" as="xs:string*">
         <xsl:analyze-string select="." regex="{$UmlautFehler-Regex}">
           <xsl:matching-substring>
               <xsl:value-of select="."/>
@@ -292,7 +300,7 @@
       context="title | subject | contributor | othertext/d104" >
         <let name="SpaceFragezeichen-Regex" value="'\w*\s[?]\W\w*'"/>
         <report  test="matches(., $SpaceFragezeichen-Regex, 's')">
-        <xsl:variable name="VSpaceFragezeichen" as="text()*">
+        <xsl:variable name="VSpaceFragezeichen" as="xs:string*">
         <xsl:analyze-string select="." regex="{$SpaceFragezeichen-Regex}" flags="s">
           <xsl:matching-substring>
               <xsl:value-of select="."/>
@@ -315,8 +323,8 @@
       Bsp.: 113?ff -->
     <let name="weitereKodierungsFehler1-Regex" value="'\w*.[^a^o^u^A^O^U][?]\p{Ll}+'"/> 
     <report test="matches(., $weitereKodierungsFehler1-Regex)">
-    <xsl:variable name="VwkF1" as="text()*">
-        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler1-Regex}">
+    <xsl:variable name="VwkF1" as="xs:string*">
+        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler1-Regex}" flags="s">
           <xsl:matching-substring>
               <xsl:value-of select="."/>
           </xsl:matching-substring>
@@ -329,8 +337,8 @@
     leicht anders, als "Spaces", Bsp.: St.?Gallen -->
     <let name="weitereKodierungsFehler2-Regex" value="'\w*\.[?]\p{Lu}+'"/>  
     <report test="matches(., $weitereKodierungsFehler2-Regex )">
-    <xsl:variable name="VwkF2" as="text()*">
-        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler2-Regex}">
+    <xsl:variable name="VwkF2" as="xs:string*">
+        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler2-Regex}" flags="s" >
           <xsl:matching-substring>
               <xsl:value-of select="."/>
           </xsl:matching-substring>
@@ -344,8 +352,8 @@
     Bsp.: §?175   kann?10 S.?75-->
     <let name="weitereKodierungsFehler3-Regex" value="'.?\D[?]\d+'"/> 
     <report test="matches(., $weitereKodierungsFehler3-Regex )">
-    <xsl:variable name="VwkF3" as="text()*">
-        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler3-Regex}">
+    <xsl:variable name="VwkF3" as="xs:string*">
+        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler3-Regex}" flags="s">
           <xsl:matching-substring>
               <xsl:value-of select="."/>
           </xsl:matching-substring>
@@ -369,6 +377,7 @@
   </pattern>-->
   <!-- &#x2013;&#8220;“   \p{Zs}   \t \r \n\-->
 
+
 <!-- Die Auflage steht im Untertitel-Segment, 
     Bsp.: 2., aktualisierte Auflage -->
 <pattern id="SubtitleAuflage">
@@ -379,6 +388,8 @@
     </report>
   </rule>
 </pattern>
+  <!-- NEU oder die Zahl in Tag b057 (EditionNumber) -->
+  
   
   <!-- im Untertitel-Segment stehen evtl. Marketinginformationen,
   Bsp.: How to Transform Your Organization from the Inside Out, plus E-Book inside (ePub, mobi oder pdf)-->
@@ -394,4 +405,15 @@
 <!--  <diagnostics>
     <diagnostic id="dSupplierWebsite">Tag b367 mit Code 01 ist für die Publisher-Website vorgesehen. </diagnostic>
   </diagnostics>-->
+  
+<!-- ALTERNATIVEN vom 29.7. mit matches befinden sich in Datei schematron-onix-praktikum --> 
+  
+    
+  <!-- NEU -->
+<!--      <pattern id="KeywordInflation">
+        <rule context="product/subject[b067='20']" role="warn">
+            <report test="ancestor::product[1]/subject[count(b067/text()='20') &gt; 19 ]"> Keywords reduzieren!</report>
+        </rule>
+    </pattern> -->
+  
 </schema>
