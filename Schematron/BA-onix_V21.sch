@@ -37,6 +37,10 @@
     <active pattern="SubtitleErweiterung"/>
   </phase>
 
+  <properties>
+    <property id="refname"><xsl:value-of select="@refname, 'd', name()"/></property>
+  </properties>
+
 
     <!-- NEU: inflat. Verwendung von Kewords, Tag b067 List 20-->
     <pattern id="KeywordInflation">
@@ -231,7 +235,7 @@
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>
-      <report test="exists($VBindestrich)"> 
+      <report test="exists($VBindestrich)" properties="refname"> 
         Liegt eine fehlerhafte Worttrennung vor? Fundstelle(n): <xsl:value-of select="string-join($VBindestrich, ', ')"/>
       </report>
     </rule>
