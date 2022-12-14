@@ -38,7 +38,7 @@
   </phase>
 
   <properties>
-    <property id="refname"><xsl:value-of select="@refname, 'd', name()"/></property>
+    <property id="refname"><xsl:value-of select="@refname"/></property>
   </properties>
 
 
@@ -66,9 +66,9 @@
 
 <!--NEU: EditionStatement b058:  muss eine Beschreibung der Edition enthalten. Nicht nur Zahl.-->
     <pattern id="EditionStatementZiffer">
-        <rule role="warning" context="b058">
-            <report test="string(number(.)) != 'NaN'" > 
-                In EditionStatement b058 steht nur eine Nummer, obwohl hier eine Beschreibung der Edition sein soll.
+        <rule role="warning" context="*:b058">
+            <report test="string(number(.)) != 'NaN'" properties="refname"> 
+                In EditionStatement <name/> steht nur eine Nummer, obwohl hier eine Beschreibung der Edition sein soll.
                 Vorschlag: ...
             </report>
         </rule>
