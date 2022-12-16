@@ -4,7 +4,7 @@
   xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <phase id="EinzelTest">
-      <active pattern="SeitenAbbildungsvermerk"/>
+    <active pattern="ZahlFehler"/>
   </phase>
 
   <phase id="BiografieFehler">
@@ -28,6 +28,8 @@
     <active pattern="BioURL"/>
     <active pattern="illustrationsNote"/>
     <active pattern="Bios6Hinweis"/>
+    <active pattern="SeitenAbbildungsvermerk"/>
+    <active pattern="EditionStatementZiffer"/>
   </phase>
   <phase id="Empfehlung">
     <active pattern="suggestedLength"/>
@@ -45,26 +47,26 @@
     <!-- NEU: inflat. Verwendung von Kewords, Tag b067 List 20-->
     <pattern id="KeywordInflation">
         <rule role="warning"
-            context="product/subject[b067='20']">
+            context="product/subject[1]">
             <report 
-                test="ancestor::product[1]/subject[count(b067/text()='20') &gt; 25]"> 
+              test="count(product//b067='20') &gt; 15"> 
                 Keywords reduzieren!
             </report>
         </rule>
     </pattern> 
 
-<!--NEU: Seitenzahl in IllustrationsNote b062 Verlag C-->
+<!--NEU: Seitenzahl in IllustrationsNote b062 (Verlag C)-->
     <pattern id="SeitenAbbildungsvermerk">
         <rule role="warning" 
-            context="b062">
+            context="*:b062">
             <report 
                test="matches(., 'S[.]')" > 
-                Befindet sich eine Seitenzahlangabe in IllustrationsNote (b062)? Vorschlag: Überführe die Seitenzahlangabe in b061.
+              Befindet sich eine Seitenzahlangabe in b062 (IllustrationsNote)? Vorschlag: Überführe die Seitenzahlangabe in b061 (NumberOfPages).
             </report>
         </rule>
     </pattern>
 
-<!--NEU: EditionStatement b058:  muss eine Beschreibung der Edition enthalten. Nicht nur Zahl.-->
+<!--NEU: EditionStatement b058 (Verlag D, E, A_V30):  muss eine Beschreibung der Edition enthalten. Nicht nur Zahl.-->
     <pattern id="EditionStatementZiffer">
         <rule role="warning" context="*:b058">
             <report test="string(number(.)) != 'NaN'" properties="refname"> 
@@ -131,7 +133,7 @@
   Spaces mit exists--> <!-- Nr. 1: d104 | b044 ; Nr. 2: ONIXmessage/product/othertext/d104 | ONIXmessage/product/contributor/b044 ;
   Nr. 3: ONIXmessage/product[contributor/b044|othertext/d104] Nr. 4: nur product, so gibt es weniger Fehlermeldungen-Anzahl-->
   <pattern id="Spaces">
-    <rule role="warning" context="d104 | b044" >
+    <rule role="warning" context="*:d104 | *:b044" >
     <let name="Punkt-Regex" value="'\w*\p{Ll}[.:!?]\p{Lu}\w*'"/>
       <xsl:variable name="VPunkt" as="xs:string*">
         <xsl:analyze-string select="." regex="{$Punkt-Regex}">
@@ -151,8 +153,8 @@
 
   <!-- angegebener Name unterscheidet sich bei Name und Einzelbiografie -->
   <pattern id="BioName">
-    <rule role="error" context="b044" >
-      <let name="b036" value="ancestor::contributor/b036/normalize-space()"/>
+    <rule role="error" context="*:b044" >
+      <let name="b036" value="ancestor::*:contributor/*:b036/normalize-space()"/>
       <let name="tokenized" value="tokenize($b036, ' ')"/>
       <let name="firstLast" value="string-join(($tokenized[1], $tokenized[last()]), ' ')"/>
       <let name="b036-regex" value="
@@ -160,7 +162,7 @@
           return
           replace(replace($t, '\.', '(\\.|\\w+)'), '\?', '\\?'), ' ')"/>
       <assert test="contains(., $b036) or contains(., $firstLast) or matches(., $b036-regex)"> 
-        Der Name des Contributors muss im Biografietext vorkommen und sollte mit dem angegebenen Namen ('<value-of select="ancestor::contributor/b036"/>')
+        Der Name des Contributors muss im Biografietext vorkommen und sollte mit dem angegebenen Namen ('<value-of select="ancestor::*:contributor/*:b036"/>')
         übereinstimmen. 
       </assert>
       <!--reicht nur erster Name und Nachname (Info)? Sonderzeichen/Umlaute?
@@ -171,7 +173,7 @@
 
   <!-- in einer Biografie steht URL, das kann zu Fehlern in Verarbeitung führen -->
   <pattern id="BioURL">
-    <rule role="warning" context="b044">
+    <rule role="warning" context="*:b044">
       <report test="contains(., 'www.') or contains(., '.de') or contains(., '.com')" > 
         Eine URL sollte nicht in einer Biographical note stehen.
         Vorschlag: Nutze dafür das Website composite.
@@ -181,12 +183,12 @@
   
   <!-- IllustrationsNote ist für Anmerkungen da -->
   <pattern id="illustrationsNote">
-    <rule role="warning" context="b062">
+    <rule role="warning" context="*:b062">
       <!--<report test="matches(., '^\d+$')"> a </report>
       <report test=". castable as xs:integer"> b </report>-->
       <report test="string(number(.)) != 'NaN'" > 
-        In Illustrations note steht nur eine Nummer, obwohl hier eine Anmerkung stehen soll.
-        Vorschlag: Überführe die Zahl in Tag b125 (NumberOfIllustrations).
+        In b062 (IllustrationsNote) steht nur eine Nummer, obwohl hier eine Anmerkung stehen soll.
+        Vorschlag: Überführe die Zahl in b125 (NumberOfIllustrations).
       </report>
     </rule>
   </pattern>
@@ -208,7 +210,7 @@
 
   <!-- Empfehlung bei seit ... Jahren -->
   <pattern id="seitJahren">
-    <rule role="information" context="b044 | othertext[d102 = '13']/d104">
+    <rule role="information" context="*:b044 | *:othertext[*:d102 = '13']/*:d104 | *:textcontent[*:x426='12']/*:d104">
       <report 
         test="matches(., 'seit[\p{Zs}\s]+(\d+|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)[\p{Zs}\s]+Jahren', 'i')" > 
         Die Information in der Biografie kann veraltet sein. Vorschlag: "seit dem Jahr ..." oder " seit über ... Jahren".
@@ -219,8 +221,10 @@
   <!-- Fehlerhafte Worttrennung, Bsp.: be-nutzen -->
   <pattern id="Bindestrich">
     <rule role="information" 
-      context="product[language[b253 = '01'][b252 = 'ger']]//d104 |
-               product[language[b253 = '01'][b252 = 'ger']]//b044">
+      context="*:product[//*:language[b253 = '01'][//*:b252 = 'ger']]//*:d104 |
+               *:product[//*:language[*:b253 = '01'][*:b252 = 'ger']]//*:b044 |
+               *:product//*:d104[not(@language='eng')] |
+               *:product//*:b044[not(@language='eng')]">
       <let name="Bindestrich-Regex" value="'\p{L}?\p{Ll}+-\p{Ll}+'"/>
       <!-- hier xsl-Teil mit exists() über report lassen, sonst werden auch stellen von not(. = '...') usw. angezeigt -->
         <xsl:variable name="VBindestrich" as="xs:string*">
@@ -239,12 +243,15 @@
         Liegt eine fehlerhafte Worttrennung vor? Fundstelle(n): <xsl:value-of select="string-join($VBindestrich, ', ')"/>
       </report>
     </rule>
-  </pattern>
+  </pattern>  
+  
+  
+  
 
 <!-- drei ident. Buchstaben hintereinander, Bsp.: solllte-->
   <pattern id="dreiIdentBuchstaben">
     <rule role="information" 
-      context="title | subject | contributor | othertext/d104">
+      context="*:title | *:subject | *:contributor | *:d104">
       <let name="dreiIdentBuchstaben-Regex" value="'[\p{L}]*([\p{L}])\1\1+[\p{L}]*'"/>  
      <xsl:variable name="VdreiIdentBuchstaben" as="xs:string*">
        <!-- hier xsl-Teil mit exists() über report lassen, sonst werden auch Stellen von not(. = 'www') usw. angezeigt --> <!-- bei if müssen Groß- und Kleinbuchstaben extra erfasst werden. i bringt eig. nichts -->
@@ -273,7 +280,7 @@
   <!-- Hinweis, dass es ein IHV im Default text format gibt -->
   <pattern id="tocDefaultTextFormat">
     <rule role="information"
-      context="othertext[d102 = '04'][d103 = '06']/d104">
+      context="*:othertext[*:d102 = '04'][*:d103 = '06']/*:d104">
       <report test="exists(.)" >
         Das TOC könnte auf eine Website übernommen werden und so seine Struktur verlieren.
         Vorschlag: Nutze bei Tag d102 den Code 02 und überführe das TOC in eine HTML-Struktur.
@@ -284,7 +291,8 @@
 <!-- Kodierungsfehler in Zahl, Bsp.: 200?000 -->
 <pattern id="ZahlFehler">
     <rule role="warning" 
-      context="title | subject | contributor | othertext/d104" >
+      context="*:title | *:subject | *:contributor | *:d104 | 
+               *:titleelement" >
       <let name="ZahlFehler-Regex" value="'\d+[?]\d+'"/>
       <report test="matches(., $ZahlFehler-Regex)"> 
         <xsl:variable name="VZahlFehler" as="xs:string*"> <!-- + auch mgl. -->
@@ -309,7 +317,8 @@
   <!-- nach a o u kommt ein Fragezeichen, Bsp.: fu?r -->
   <pattern id="UmlautFehler">
     <rule role="warning" 
-      context="title | subject | contributor | othertext/d104">
+      context="*:title | *:subject | *:contributor | *:d104 |
+               *:titleelement">
       <let name="UmlautFehler-Regex" value="'\w*[aouAOU][?][a-z]\w*'"/>  
       <report test="matches(., $UmlautFehler-Regex)">
         <xsl:variable name="VUmlautFehler" as="xs:string*">
@@ -329,7 +338,8 @@
        Bsp.: 2018 ? 1 -->
   <pattern id="SpaceFragezeichen">
       <rule role="warning"
-      context="title | subject | contributor | othertext/d104" >
+        context="*:title | *:subject | *:contributor | *:d104 |
+                 *:titleelement" >
         <let name="SpaceFragezeichen-Regex" value="'\w*\s[?]\W\w*'"/>
         <report  test="matches(., $SpaceFragezeichen-Regex, 's')">
         <xsl:variable name="VSpaceFragezeichen" as="xs:string*">
@@ -349,7 +359,7 @@
     Fundstellen nur in OtherText -->
 <pattern id="weitereKodierungsFehler">
   <rule role="warning"
-    context="othertext/d104">
+    context="*:d104">
     
     <!--A: nach einem Zeichen *außer aou* kommt direkt ein Fragezeichen und danach ein kleiner Buchstabe
       Bsp.: 113?ff -->
