@@ -4,7 +4,7 @@
   xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <phase id="EinzelTest">
-    <active pattern="ZahlFehler"/>
+    <active pattern="KeywordInflation"/>
   </phase>
 
   <phase id="BiografieFehler">
@@ -33,6 +33,7 @@
   </phase>
   <phase id="Empfehlung">
     <active pattern="suggestedLength"/>
+    <active pattern="KeywordInflation"/>
     <active pattern="tocDefaultTextFormat"/>
     <active pattern="seitJahren"/>
     <active pattern="SubtitleAuflage"/>
@@ -47,10 +48,10 @@
     <!-- NEU: inflat. Verwendung von Kewords, Tag b067 List 20-->
     <pattern id="KeywordInflation">
         <rule role="warning"
-            context="product/subject[1]">
+          context="*:product/*:subject[1]">
             <report 
-              test="count(product//b067='20') &gt; 15"> 
-                Keywords reduzieren!
+              test="count(*:product//*:b067='20') &gt; 15"> 
+                Reduziere die Keywords. Es sind über 15 Keywords zu diesem Produkt eingetragen.
             </report>
         </rule>
     </pattern> 
@@ -60,7 +61,7 @@
         <rule role="warning" 
             context="*:b062">
             <report 
-               test="matches(., 'S[.]')" > 
+              test="matches(., 'S[.]')" properties="refname" > 
               Befindet sich eine Seitenzahlangabe in b062 (IllustrationsNote)? Vorschlag: Überführe die Seitenzahlangabe in b061 (NumberOfPages).
             </report>
         </rule>
@@ -70,8 +71,7 @@
     <pattern id="EditionStatementZiffer">
         <rule role="warning" context="*:b058">
             <report test="string(number(.)) != 'NaN'" properties="refname"> 
-                In EditionStatement <name/> steht nur eine Nummer, obwohl hier eine Beschreibung der Edition sein soll.
-                Vorschlag: ...
+                In b058 (EditionStatement) steht nur eine Nummer, obwohl hier eine Beschreibung der Edition sein soll.
             </report>
         </rule>
     </pattern>
@@ -80,12 +80,17 @@
   <!-- Nur ein Contributor (egal welche Rolle), Texte unterscheiden sich -->
   <pattern id="Bios1">
     <rule role="error" context="
-        product[count(contributor) = 1]
-               [contributor/b044]
-               /othertext[d102 = '13']/d104">
-      <assert test="ancestor::product[1]/contributor[b044]/b044/normalize-space() = normalize-space(.)" > 
+               *:product[count(*:contributor) = 1]
+               [*:contributor/*:b044]
+               /*:othertext[*:d102 = '13']/*:d104 |
+               
+               *:product[count(.//*:contributor) = 1]
+               [.//*:contributor/*:b044]
+               //*:textcontent[*:x426 = '12']/*:d104">
+      <assert test="ancestor::*:product[1]//*:contributor[*:b044]/*:b044/normalize-space() = normalize-space(.)"
+        properties="refname"> 
         Es gibt nur einen Contributor und dessen Biografietext weicht vom Text für alle Contributoren ab. 
-        Wenn es nur einen Contributor gibt, benötigt es keine Biographical note im OtherText composite.
+        Wenn es nur einen Contributor gibt, benötigt es keine biographical note im other text bzw. text content composite.
       </assert>
     </rule>
   </pattern>
@@ -94,10 +99,15 @@
   <!-- Nur ein Contributor, Texte stimmen überein -->
   <pattern id="Bios3b">
      <rule role="information"
-      context="product[count(contributor) = 1]/othertext[d102 = '13']/d104" >
-      <report test="ancestor::product[1]/contributor[b044]/b044/normalize-space() = normalize-space(.)" > 
+       context="*:product[count(*:contributor) = 1]
+                /*:othertext[*:d102 = '13']/*:d104 |
+                
+                *:product[count(.//*:contributor) = 1]
+                //*:textcontent[*:x426 = '12']/*:d104">
+       <report test="ancestor::*:product[1]//*:contributor[*:b044]/*:b044/normalize-space() = normalize-space(.)"
+              properties="refname"> 
             Der Biografietext des einzigen Contributors stimmt mit dem Text für alle Contributoren überein.
-            Das OtherText composite mit der Biographical note ist redundant und kann gelöscht werden. 
+            Das other text bzw. text content composite mit der biographical note ist redundant und kann gelöscht werden. 
       </report>
      </rule>
   </pattern>
@@ -108,9 +118,12 @@
   <!--Fall vermeiden, dass es z.B. 2 Autoren gibt und nur einer eine Bio hat, die in die Gesamtbio kommt-->
   <pattern id="Bios4">
     <rule role="error" 
-          context="product[count(contributor[b035 = 'A01']) &gt; 1]/contributor[b035 = 'A01']/b044">
-      <report test="ancestor::product[1][count(contributor[b035 = 'A01']) != count(contributor[b035 = 'A01']/b044)]" > 
-        Es gibt ungleich viele Autoren und Biografien (Tag b044). Dies kann zu Fehlern in der Biographical note im OtherText composite führen.
+      context="*:product[count(.//*:contributor[*:b035 = 'A01']) &gt; 1]
+               //*:contributor[b035 = 'A01']/*:b044 ">
+      <report test="ancestor::*:product[1]
+                    [count(.//*:contributor[*:b035 = 'A01']) != count(.//*:contributor[*:b035 = 'A01']/*:b044)]"
+                    properties="refname"> 
+        Es gibt ungleich viele Autoren und Biografien in b044 (BiographicalNote). Dies kann zu Fehlern in der biographical note im other text bzw. text content composite führen.
       </report>
     </rule>
   </pattern>
@@ -118,10 +131,14 @@
   <!-- Mehr als ein Contributor, einer davon hat einen Text und dieser stimmt mit Gesamtbiografie überein (falsche Verwendung)-->
   <pattern id="Bios6Hinweis">
     <rule role="info" context="
-        product[count(contributor) &gt; 1]
-               [contributor/b044]
-               /othertext[d102 = '13']/d104">
-      <report test="ancestor::product[1]/contributor[b044]/b044/normalize-space() = normalize-space(.)" > 
+                *:product[count(*:contributor) &gt; 1]
+                [*:contributor/*:b044]
+                /*:othertext[*:d102 = '13']/*:d104 |
+               
+               *:product[count(.//*:contributor) &gt; 1]
+               [.//*:contributor/*:b044]
+               //*:textcontent[*:x426 = '12']/*:d104">
+      <report test="ancestor::*:product[1]//*:contributor[*:b044]/*:b044/normalize-space() = normalize-space(.)" > 
         Der Biografietext eines Contributors stimmt mit dem Text für alle Contributoren im OtherText composite überein. 
         Es sollte im OtherText composite aber um mehrere Contributoren gehen.
         (Der Biografietext im OtherText composite sollte gelöscht werden.)
@@ -186,7 +203,7 @@
     <rule role="warning" context="*:b062">
       <!--<report test="matches(., '^\d+$')"> a </report>
       <report test=". castable as xs:integer"> b </report>-->
-      <report test="string(number(.)) != 'NaN'" > 
+      <report test="string(number(.)) != 'NaN'" properties="refname" > 
         In b062 (IllustrationsNote) steht nur eine Nummer, obwohl hier eine Anmerkung stehen soll.
         Vorschlag: Überführe die Zahl in b125 (NumberOfIllustrations).
       </report>
@@ -196,16 +213,16 @@
  <!-- Empfehlungen für Zeichenlängen in best. Elementen; hier aus der Dokumentation -->
   <!-- individuelle Empfehlungen oder Wünsche auch mgl. -->
   <pattern id="suggestedLength">
-    <rule role="information" context="b336">
-      <report test="./string-length() &gt; 100"> 
-        Die empfohlene Länge beträgt hier 100 Zeichen. Wenn möglich, kürze den Text.
-      </report>
-    </rule>
-    <rule role="information" context="b203">
+    <rule role="information" context="*:b203">
       <report test="./string-length() &gt; 300"> 
         Die empfohlene Länge beträgt hier 300 Zeichen. Wenn möglich, kürze den Text.
       </report>
     </rule>
+    <!--    <rule role="information" context="*:b336">
+      <report test="./string-length() &gt; 100"> 
+        Die empfohlene Länge beträgt hier 100 Zeichen. Wenn möglich, kürze den Text.
+      </report>
+    </rule>-->
   </pattern>
 
   <!-- Empfehlung bei seit ... Jahren -->
@@ -277,13 +294,13 @@
   
 
 
-  <!-- Hinweis, dass es ein IHV im Default text format gibt -->
+  <!-- Hinweis, dass es ein IHV im Default text format gibt, nur für ONIX V2.1 -->
   <pattern id="tocDefaultTextFormat">
     <rule role="information"
       context="*:othertext[*:d102 = '04'][*:d103 = '06']/*:d104">
       <report test="exists(.)" >
         Das TOC könnte auf eine Website übernommen werden und so seine Struktur verlieren.
-        Vorschlag: Nutze bei Tag d102 den Code 02 und überführe das TOC in eine HTML-Struktur.
+        Vorschlag: Nutze bei d102 den Code 02 und überführe das TOC in eine HTML-Struktur.
       </report>
     </rule>
   </pattern>
@@ -423,10 +440,10 @@
 <!-- Die Auflage steht im Untertitel-Segment, 
     Bsp.: 2., aktualisierte Auflage -->
 <pattern id="SubtitleAuflage">
-  <rule role="information" context="b029">
+  <rule role="information" context="*:b029">
     <report test="contains(., 'Auflage')">
-      Im Subtitle steht die Auflage. 
-      Vorschlag: Überführe den Text besser in Tag b058 (EditionStatement).
+      In b029 (Subtitle) steht die Auflage. 
+      Vorschlag: Überführe den Text in b058 (EditionStatement).
     </report>
   </rule>
 </pattern>
@@ -436,10 +453,10 @@
   <!-- im Untertitel-Segment stehen evtl. Marketinginformationen,
   Bsp.: How to Transform Your Organization from the Inside Out, plus E-Book inside (ePub, mobi oder pdf)-->
   <pattern id="SubtitleErweiterung">
-  <rule role="information" context="b029">
+  <rule role="information" context="*:b029">
     <report test="contains(., 'Book')">
-      Im Subtitle stehen möglicherweise zusätzliche Marketinginformationen. 
-      Vorschlag: Überführe die Information in ein OtherText composite (z.B. mit Tag d102, Code 19 (Feature)).
+      In b029 (Subtitle) stehen möglicherweise Marketinginformationen. 
+      Vorschlag: Überführe die Information in ein Other text bzw. Text content composite.
     </report>
   </rule>
 </pattern>
