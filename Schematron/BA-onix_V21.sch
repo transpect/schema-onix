@@ -4,40 +4,37 @@
   xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <phase id="EinzelTest">
-    <active pattern="KeywordInflation"/>
+    <active pattern="KeywordInflation"/><!--Für Anpassung dem Attributwert die ID des entspr. Patterns geben-->
   </phase>
-
+  
+  <phase id="FalscheVerwendung">
+    <active pattern="AbbildungsnotizSeiten"/>
+    <active pattern="EditionsbeschreibungZiffer"/>
+<!--    <active pattern="Spielmeldung"/>-->
+    <active pattern="AbbildungsnotizZiffer"/>
+    <active pattern="UntertitelAuflage"/>
+    <active pattern="UntertitelErweiterung"/>
+  </phase>
   <phase id="BiografieFehler">
-    <active pattern="Bios1"/>
-    <active pattern="Bios3b"/>
-    <active pattern="Bios4"/> 
+    <active pattern="ContributorGesamtbio"/>
+    <active pattern="EinContributorBios"/>
+    <active pattern="AutorenBios"/> 
     <active pattern="BioName"/>
+    <active pattern="BioURL"/>
   </phase>
   <phase id="TextFehler">
-    <active pattern="dreiIdentBuchstaben"/>
     <active pattern="Bindestrich"/>
-    <active pattern="Spaces"/>
-  </phase>
-  <phase id="KodierungsFehler">
-    <active pattern="UmlautFehler"/>
+    <active pattern="DreiBuchstaben"/>
+    <active pattern="FehlendesSpace"/>
     <active pattern="ZahlFehler"/>
-    <active pattern="SpaceFragezeichen"/>
-    <active pattern="weitereKodierungsFehler"/>
-  </phase>
-  <phase id="falscheVerwendung">
-    <active pattern="BioURL"/>
-    <active pattern="illustrationsNote"/>
-    <active pattern="Bios6Hinweis"/>
-    <active pattern="SeitenAbbildungsvermerk"/>
-    <active pattern="EditionStatementZiffer"/>
+    <active pattern="UmlautFehler"/>
+    <active pattern="SonstigeKodierungsfehler"/>
   </phase>
   <phase id="Empfehlung">
-    <active pattern="suggestedLength"/>
     <active pattern="KeywordInflation"/>
-    <active pattern="tocDefaultTextFormat"/>
-    <active pattern="seitJahren"/>
-    <active pattern="SubtitleAuflage"/>
-    <active pattern="SubtitleErweiterung"/>
+    <active pattern="Zeichenlaenge"/>
+    <active pattern="SeitJahren"/>
+    <active pattern="TOCDefaultTextFormat"/>
   </phase>
 
   <properties>
@@ -45,19 +42,38 @@
   </properties>
 
 
+  <!-- NEU:Spielmeldung 4.3. , not() in erstem Report, damit sich die Meldungen nicht überschneiden -->
+  <pattern id="Spielmeldung">
+    <rule 
+      context="b012[.='BZ'] | b012[.='PZ'] | b012[.='ZA'] | b012[.='ZZ'] | b012[.='00']" >
+      <report role="information"
+        test="exists(.) and not(parent::product/title[matches(., 'Spiel|spiel|Quiz|quiz|Game|game')])"  >
+        Es handelt sich möglicherweise um ein Nonbookprodukt, das ungenau kategorisiert wurde.
+        Vorschlag: In b012 (ProductForm) den Code anpassen.
+      </report>
+      <report role="warning"
+        test="parent::product/title[matches(., 'Spiel|spiel|Quiz|quiz|Game|game')]">
+        Handelt es sich bei dem Produkt um ein Spiel? Vorschlag: In b012 (ProductForm) den Code ZE nutzen.
+      </report>
+    </rule>
+  </pattern>
+  
+
+
     <!-- NEU: inflat. Verwendung von Kewords, Tag b067 List 20-->
     <pattern id="KeywordInflation">
         <rule role="warning"
           context="*:product/*:subject[1]">
             <report 
-              test="count(*:product//*:b067='20') &gt; 15"> 
-                Reduziere die Keywords. Es sind über 15 Keywords zu diesem Produkt eingetragen.
+              test="parent::product[count(.//*:b067/'20') &gt; 100]"> 
+                Reduziere die Keywords. Es sind über 100 Keywords zu diesem Produkt eingetragen.
             </report>
         </rule>
     </pattern> 
 
+
 <!--NEU: Seitenzahl in IllustrationsNote b062 (Verlag C)-->
-    <pattern id="SeitenAbbildungsvermerk">
+    <pattern id="AbbildungsnotizSeiten">
         <rule role="warning" 
             context="*:b062">
             <report 
@@ -68,8 +84,8 @@
     </pattern>
 
 <!--NEU: EditionStatement b058 (Verlag D, E, A_V30):  muss eine Beschreibung der Edition enthalten. Nicht nur Zahl.-->
-    <pattern id="EditionStatementZiffer">
-        <rule role="warning" context="*:b058">
+    <pattern id="EditionsbeschreibungZiffer">
+        <rule role="error" context="*:b058">
             <report test="string(number(.)) != 'NaN'" properties="refname"> 
                 In b058 (EditionStatement) steht nur eine Nummer, obwohl hier eine Beschreibung der Edition sein soll.
             </report>
@@ -78,7 +94,7 @@
 
 
   <!-- Nur ein Contributor (egal welche Rolle), Texte unterscheiden sich -->
-  <pattern id="Bios1">
+  <pattern id="EinContributorBios">
     <rule role="error" context="
                *:product[count(*:contributor) = 1]
                [*:contributor/*:b044]
@@ -96,27 +112,10 @@
   </pattern>
 
 
-  <!-- Nur ein Contributor, Texte stimmen überein -->
-  <pattern id="Bios3b">
-     <rule role="information"
-       context="*:product[count(*:contributor) = 1]
-                /*:othertext[*:d102 = '13']/*:d104 |
-                
-                *:product[count(.//*:contributor) = 1]
-                //*:textcontent[*:x426 = '12']/*:d104">
-       <report test="ancestor::*:product[1]//*:contributor[*:b044]/*:b044/normalize-space() = normalize-space(.)"
-              properties="refname"> 
-            Der Biografietext des einzigen Contributors stimmt mit dem Text für alle Contributoren überein.
-            Das other text bzw. text content composite mit der biographical note ist redundant und kann gelöscht werden. 
-      </report>
-     </rule>
-  </pattern>
-  
-  
 
   <!-- Mehrere Contributoren mit Autorenrolle, aber nicht jeder hat eine Einzelbiografie -->
   <!--Fall vermeiden, dass es z.B. 2 Autoren gibt und nur einer eine Bio hat, die in die Gesamtbio kommt-->
-  <pattern id="Bios4">
+  <pattern id="AutorenBios">
     <rule role="error" 
       context="*:product[count(.//*:contributor[*:b035 = 'A01']) &gt; 1]
                //*:contributor[b035 = 'A01']/*:b044 ">
@@ -129,7 +128,7 @@
   </pattern>
   
   <!-- Mehr als ein Contributor, einer davon hat einen Text und dieser stimmt mit Gesamtbiografie überein (falsche Verwendung)-->
-  <pattern id="Bios6Hinweis">
+  <pattern id="ContributorGesamtbio">
     <rule role="info" context="
                 *:product[count(*:contributor) &gt; 1]
                 [*:contributor/*:b044]
@@ -147,9 +146,9 @@
   </pattern>
 
 <!-- Fehlendes Leerzeichen zwischen zwei Sätzen, Bsp.: Buch:Wer
-  Spaces mit exists--> <!-- Nr. 1: d104 | b044 ; Nr. 2: ONIXmessage/product/othertext/d104 | ONIXmessage/product/contributor/b044 ;
+  FehlendesSpace mit exists--> <!-- Nr. 1: d104 | b044 ; Nr. 2: ONIXmessage/product/othertext/d104 | ONIXmessage/product/contributor/b044 ;
   Nr. 3: ONIXmessage/product[contributor/b044|othertext/d104] Nr. 4: nur product, so gibt es weniger Fehlermeldungen-Anzahl-->
-  <pattern id="Spaces">
+  <pattern id="FehlendesSpace">
     <rule role="warning" context="*:d104 | *:b044" >
     <let name="Punkt-Regex" value="'\w*\p{Ll}[.:!?]\p{Lu}\w*'"/>
       <xsl:variable name="VPunkt" as="xs:string*">
@@ -182,9 +181,6 @@
         Der Name des Contributors muss im Biografietext vorkommen und sollte mit dem angegebenen Namen ('<value-of select="ancestor::*:contributor/*:b036"/>')
         übereinstimmen. 
       </assert>
-      <!--reicht nur erster Name und Nachname (Info)? Sonderzeichen/Umlaute?
-      wenn in Biografie zusätzlich z.B. "J." steht ggf. noch implementieren
-       '\s([A-Z]\.)\s' -->
     </rule>
   </pattern>
 
@@ -199,8 +195,8 @@
   </pattern>
   
   <!-- IllustrationsNote ist für Anmerkungen da -->
-  <pattern id="illustrationsNote">
-    <rule role="warning" context="*:b062">
+  <pattern id="AbbildungsnotizZiffer">
+    <rule role="error" context="*:b062">
       <!--<report test="matches(., '^\d+$')"> a </report>
       <report test=". castable as xs:integer"> b </report>-->
       <report test="string(number(.)) != 'NaN'" properties="refname" > 
@@ -212,7 +208,7 @@
 
  <!-- Empfehlungen für Zeichenlängen in best. Elementen; hier aus der Dokumentation -->
   <!-- individuelle Empfehlungen oder Wünsche auch mgl. -->
-  <pattern id="suggestedLength">
+  <pattern id="Zeichenlaenge">
     <rule role="information" context="*:b203">
       <report test="./string-length() &gt; 300"> 
         Die empfohlene Länge beträgt hier 300 Zeichen. Wenn möglich, kürze den Text.
@@ -226,8 +222,8 @@
   </pattern>
 
   <!-- Empfehlung bei seit ... Jahren -->
-  <pattern id="seitJahren">
-    <rule role="information" context="*:b044 | *:othertext[*:d102 = '13']/*:d104 | *:textcontent[*:x426='12']/*:d104">
+  <pattern id="SeitJahren">
+    <rule role="warning" context="*:b044 | *:othertext[*:d102 = '13']/*:d104 | *:textcontent[*:x426='12']/*:d104">
       <report 
         test="matches(., 'seit[\p{Zs}\s]+(\d+|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)[\p{Zs}\s]+Jahren', 'i')" > 
         Die Information in der Biografie kann veraltet sein. Vorschlag: "seit dem Jahr ..." oder " seit über ... Jahren".
@@ -266,13 +262,13 @@
   
 
 <!-- drei ident. Buchstaben hintereinander, Bsp.: solllte-->
-  <pattern id="dreiIdentBuchstaben">
+  <pattern id="DreiBuchstaben">
     <rule role="information" 
       context="*:title | *:subject | *:contributor | *:d104">
-      <let name="dreiIdentBuchstaben-Regex" value="'[\p{L}]*([\p{L}])\1\1+[\p{L}]*'"/>  
-     <xsl:variable name="VdreiIdentBuchstaben" as="xs:string*">
+      <let name="DreiBuchstaben-Regex" value="'[\p{L}]*([\p{L}])\1\1+[\p{L}]*'"/>  
+     <xsl:variable name="VDreiBuchstaben" as="xs:string*">
        <!-- hier xsl-Teil mit exists() über report lassen, sonst werden auch Stellen von not(. = 'www') usw. angezeigt --> <!-- bei if müssen Groß- und Kleinbuchstaben extra erfasst werden. i bringt eig. nichts -->
-        <xsl:analyze-string select="." regex="{$dreiIdentBuchstaben-Regex}" flags="i">
+        <xsl:analyze-string select="." regex="{$DreiBuchstaben-Regex}" flags="i">
           <xsl:matching-substring>
             <xsl:if test="
                 not(. = 'www') 
@@ -285,9 +281,9 @@
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>
-      <report test="exists($VdreiIdentBuchstaben)"> 
+      <report test="exists($VDreiBuchstaben)"> 
         Drei identische Buchstaben erscheinen hintereinander. Liegt ein Rechtschreibfehler vor? 
-        Fundstelle(n): <xsl:value-of select="string-join($VdreiIdentBuchstaben, ', ')"/>
+        Fundstelle(n): <xsl:value-of select="string-join($VDreiBuchstaben, ', ')"/>
       </report>
     </rule>
   </pattern>
@@ -295,7 +291,7 @@
 
 
   <!-- Hinweis, dass es ein IHV im Default text format gibt, nur für ONIX V2.1 -->
-  <pattern id="tocDefaultTextFormat">
+  <pattern id="TOCDefaultTextFormat">
     <rule role="information"
       context="*:othertext[*:d102 = '04'][*:d103 = '06']/*:d104">
       <report test="exists(.)" >
@@ -325,9 +321,6 @@
     </rule>
   </pattern>
   
-  <!-- K1 -->
-  <!-- K2 -->
-  <!-- K3-->
   
     <!--Idee: SQF bei ZahlFehler: Fragezeichen entweder zu Punkt machen, löschen oder in engl. Texten zu Komma machen-->
 
@@ -351,109 +344,94 @@
     </rule>
   </pattern>
   
-  <!-- vor einem Fragezeichen ist ein Whitespace und danach folgt *keine Ziffer oder kein Buchstabe*
-       Bsp.: 2018 ? 1 -->
-  <pattern id="SpaceFragezeichen">
-      <rule role="warning"
-        context="*:title | *:subject | *:contributor | *:d104 |
-                 *:titleelement" >
-        <let name="SpaceFragezeichen-Regex" value="'\w*\s[?]\W\w*'"/>
-        <report  test="matches(., $SpaceFragezeichen-Regex, 's')">
-        <xsl:variable name="VSpaceFragezeichen" as="xs:string*">
-        <xsl:analyze-string select="." regex="{$SpaceFragezeichen-Regex}" flags="s">
-          <xsl:matching-substring>
-              <xsl:value-of select="."/>
-          </xsl:matching-substring>
-        </xsl:analyze-string>
-      </xsl:variable>
-        Möglicherweise liegt ein Zeichenfehler mit einem Whitespace vor.  
-        Fundstelle(n): <xsl:value-of select="string-join($VSpaceFragezeichen, ', ')" />
-      </report>
-      </rule>
-   </pattern>
 
 <!-- drei weitere Kodierungsfehler mit Fragezeichen; dabei sind die vorherigen Fehler ausgeschlossen.
     Fundstellen nur in OtherText -->
-<pattern id="weitereKodierungsFehler">
+<pattern id="SonstigeKodierungsfehler">
   <rule role="warning"
-    context="*:d104">
+    context="*:d104 | *:b044">
     
-    <!--A: nach einem Zeichen *außer aou* kommt direkt ein Fragezeichen und danach ein kleiner Buchstabe
+   <!-- SpaceFragezeichen:
+   vor einem Fragezeichen ist ein Whitespace und danach folgt *keine Ziffer oder kein Buchstabe*
+       Bsp.: 2018 ? 1--> 
+    <let name="SpaceFragezeichen-Regex" value="'\w*\s[?]\W\w*'"/>
+    <report  test="matches(., $SpaceFragezeichen-Regex, 's')">
+      <xsl:variable name="VSpaceFragezeichen" as="xs:string*">
+        <xsl:analyze-string select="." regex="{$SpaceFragezeichen-Regex}" flags="s">
+          <xsl:matching-substring>
+            <xsl:value-of select="."/>
+          </xsl:matching-substring>
+        </xsl:analyze-string>
+      </xsl:variable>
+     A: Hier liegen möglicherweise Zeichenfehler mit einem Whitespace vor.  
+      Fundstelle(n): <xsl:value-of select="string-join($VSpaceFragezeichen, ', ')" />
+    </report>
+    
+    
+    <!-- B: nach einem Zeichen *außer aou* kommt direkt ein Fragezeichen und danach ein kleiner Buchstabe
       Bsp.: 113?ff -->
-    <let name="weitereKodierungsFehler1-Regex" value="'\w*.[^a^o^u^A^O^U][?]\p{Ll}+'"/> 
-    <report test="matches(., $weitereKodierungsFehler1-Regex)">
+    <let name="SonstigeKodierungsfehler1-Regex" value="'\w*.[^a^o^u^A^O^U][?]\p{Ll}+'"/> 
+    <report test="matches(., $SonstigeKodierungsfehler1-Regex)">
     <xsl:variable name="VwkF1" as="xs:string*">
-        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler1-Regex}" flags="s">
+        <xsl:analyze-string select="." regex="{$SonstigeKodierungsfehler1-Regex}" flags="s">
           <xsl:matching-substring>
               <xsl:value-of select="."/>
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>  
-     A: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF1, ', ')" />
+     B: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF1, ', ')" />
     </report>
    
-     <!--B: nach einem Punkt kommt direkt ein Fragezeichen und danach ein Großbuchstabe.
-    leicht anders, als "Spaces", Bsp.: St.?Gallen -->
-    <let name="weitereKodierungsFehler2-Regex" value="'\w*\.[?]\p{Lu}+'"/>  
-    <report test="matches(., $weitereKodierungsFehler2-Regex )">
+     <!--C: nach einem Punkt kommt direkt ein Fragezeichen und danach ein Großbuchstabe.
+    leicht anders, als "FehlendesSpace", Bsp.: St.?Gallen -->
+    <let name="SonstigeKodierungsfehler2-Regex" value="'\w*\.[?]\p{Lu}+'"/>  
+    <report test="matches(., $SonstigeKodierungsfehler2-Regex )">
     <xsl:variable name="VwkF2" as="xs:string*">
-        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler2-Regex}" flags="s" >
+        <xsl:analyze-string select="." regex="{$SonstigeKodierungsfehler2-Regex}" flags="s" >
           <xsl:matching-substring>
               <xsl:value-of select="."/>
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>  
-     B: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF2, ', ')" />      
+     C: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF2, ', ')" />      
     </report>
     
     
-    <!--C: nach einem Zeichen *außer einer Ziffer* kommt direkt ein Fragezeichen und danach eine Ziffer (1?00 ausschließen)
+    <!--D: nach einem Zeichen *außer einer Ziffer* kommt direkt ein Fragezeichen und danach eine Ziffer (1?00 ausschließen)
     Bsp.: §?175   kann?10 S.?75-->
-    <let name="weitereKodierungsFehler3-Regex" value="'.?\D[?]\d+'"/> 
-    <report test="matches(., $weitereKodierungsFehler3-Regex )">
+    <let name="SonstigeKodierungsfehler3-Regex" value="'.?\D[?]\d+'"/> 
+    <report test="matches(., $SonstigeKodierungsfehler3-Regex )">
     <xsl:variable name="VwkF3" as="xs:string*">
-        <xsl:analyze-string select="." regex="{$weitereKodierungsFehler3-Regex}" flags="s">
+        <xsl:analyze-string select="." regex="{$SonstigeKodierungsfehler3-Regex}" flags="s">
           <xsl:matching-substring>
               <xsl:value-of select="."/>
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>  
-     C: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF3, ', ')" />        
+     D: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF3, ', ')" />        
     </report>
     
   </rule>
 </pattern>
 
-<!-- im Tag für die Händler/Lieferantenwebsite steht der Link des Publishers (falsche Verwendung; Tag wird durchgehend genutzt) -->
-  <!--<pattern id="SupplierWebsite">
-    <rule role="information" 
-      context="product/supplydetail/website[b367 = '33']/b295">
-      <report test="./text() = ancestor::product/publisher/website[b367 = '01']/b295/text()"
-              diagnostics="dSupplierWebsite"> 
-        Code 33 (List 73) ist redundant: "Eine Unternehmenswebsite, die von einem Händler oder einem anderen Lieferanten (nicht dem Publisher) betrieben wird."
-      </report>
-    </rule>
-  </pattern>-->
-  <!-- &#x2013;&#8220;“   \p{Zs}   \t \r \n\-->
 
 
 <!-- Die Auflage steht im Untertitel-Segment, 
     Bsp.: 2., aktualisierte Auflage -->
-<pattern id="SubtitleAuflage">
-  <rule role="information" context="*:b029">
+<pattern id="UntertitelAuflage">
+  <rule role="error" context="*:b029">
     <report test="contains(., 'Auflage')">
       In b029 (Subtitle) steht die Auflage. 
       Vorschlag: Überführe den Text in b058 (EditionStatement).
     </report>
   </rule>
 </pattern>
-  <!-- NEU oder die Zahl in Tag b057 (EditionNumber) -->
   
   
   <!-- im Untertitel-Segment stehen evtl. Marketinginformationen,
   Bsp.: How to Transform Your Organization from the Inside Out, plus E-Book inside (ePub, mobi oder pdf)-->
-  <pattern id="SubtitleErweiterung">
-  <rule role="information" context="*:b029">
+  <pattern id="UntertitelErweiterung">
+  <rule role="warning" context="*:b029">
     <report test="contains(., 'Book')">
       In b029 (Subtitle) stehen möglicherweise Marketinginformationen. 
       Vorschlag: Überführe die Information in ein Other text bzw. Text content composite.
@@ -461,11 +439,6 @@
   </rule>
 </pattern>
 
-<!--  <diagnostics>
-    <diagnostic id="dSupplierWebsite">Tag b367 mit Code 01 ist für die Publisher-Website vorgesehen. </diagnostic>
-  </diagnostics>-->
-  
-<!-- ALTERNATIVEN vom 29.7. mit matches befinden sich in Datei schematron-onix-praktikum --> 
-  
+
   
 </schema>
