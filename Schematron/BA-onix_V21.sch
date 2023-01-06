@@ -4,13 +4,13 @@
   xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <phase id="EinzelTest">
-    <active pattern="KeywordInflation"/><!--Für Anpassung dem Attributwert die ID des entspr. Patterns geben-->
+    <active pattern="Spielmeldung"/><!--Für Anpassung dem Attributwert die ID des entspr. Patterns geben-->
   </phase>
   
   <phase id="FalscheVerwendung">
     <active pattern="AbbildungsnotizSeiten"/>
     <active pattern="EditionsbeschreibungZiffer"/>
-<!--    <active pattern="Spielmeldung"/>-->
+    <active pattern="Spielmeldung"/>
     <active pattern="AbbildungsnotizZiffer"/>
     <active pattern="UntertitelAuflage"/>
     <active pattern="UntertitelErweiterung"/>
@@ -42,17 +42,27 @@
   </properties>
 
 
-  <!-- NEU:Spielmeldung 4.3. , not() in erstem Report, damit sich die Meldungen nicht überschneiden -->
+  <!-- NEU:Spielmeldung 4.3. , not() in erstem Report-Test, damit sich die Meldungen nicht überschneiden -->
   <pattern id="Spielmeldung">
-    <rule 
-      context="b012[.='BZ'] | b012[.='PZ'] | b012[.='ZA'] | b012[.='ZZ'] | b012[.='00']" >
-      <report role="information"
-        test="exists(.) and not(parent::product/title[matches(., 'Spiel|spiel|Quiz|quiz|Game|game')])"  >
+    <rule context="*:b012[.='BZ'] | *:b012[.='PZ'] | *:b012[.='ZA'] | 
+                   *:b012[.='ZZ'] | *:b012[.='00']" >
+      <!-- ONIX 2.1 -->
+      <report role="information" 
+        test="exists(.) and not(parent::product/title[matches(., 'Spiel|spiel|Quiz|quiz|Game|game')])"
+        properties="refname">
         Es handelt sich möglicherweise um ein Nonbookprodukt, das ungenau kategorisiert wurde.
         Vorschlag: In b012 (ProductForm) den Code anpassen.
       </report>
-      <report role="warning"
-        test="parent::product/title[matches(., 'Spiel|spiel|Quiz|quiz|Game|game')]">
+      <report role="warning" 
+        test="parent::product/title[matches(., 'Spiel|spiel|Quiz|quiz|Game|game')]"
+        properties="refname">
+        Handelt es sich bei dem Produkt um ein Spiel? Vorschlag: In b012 (ProductForm) den Code ZE nutzen.
+      </report>
+      
+      <!-- ONIX 3.0 (hier kann schwer verhindert werden, dass nicht auch die Meldung des ersten Reports genannt wird. -->
+      <report role="warning" 
+        test="ancestor::*:product//*:titledetail[matches(., 'Spiel|spiel|Quiz|quiz|Game|game')]"
+        properties="refname">
         Handelt es sich bei dem Produkt um ein Spiel? Vorschlag: In b012 (ProductForm) den Code ZE nutzen.
       </report>
     </rule>
@@ -62,11 +72,12 @@
 
     <!-- NEU: inflat. Verwendung von Kewords, Tag b067 List 20-->
     <pattern id="KeywordInflation">
-        <rule role="warning"
-          context="*:product/*:subject[1]">
-            <report 
-              test="parent::product[count(.//*:b067/'20') &gt; 100]"> 
-                Reduziere die Keywords. Es sind über 100 Keywords zu diesem Produkt eingetragen.
+        <rule role="information" 
+          context="*:product//*:subject[1]">
+          <report 
+              test="ancestor::*:product[count(.//*:b067/'20') &gt; 35]"
+              properties="refname"> 
+              Reduziere die Keywords. Es sind über 35 Keywords zu diesem Produkt eingetragen.
             </report>
         </rule>
     </pattern> 
@@ -77,7 +88,8 @@
         <rule role="warning" 
             context="*:b062">
             <report 
-              test="matches(., 'S[.]')" properties="refname" > 
+              test="matches(., 'S[.]')" 
+              properties="refname" > 
               Befindet sich eine Seitenzahlangabe in b062 (IllustrationsNote)? Vorschlag: Überführe die Seitenzahlangabe in b061 (NumberOfPages).
             </report>
         </rule>
@@ -86,7 +98,9 @@
 <!--NEU: EditionStatement b058 (Verlag D, E, A_V30):  muss eine Beschreibung der Edition enthalten. Nicht nur Zahl.-->
     <pattern id="EditionsbeschreibungZiffer">
         <rule role="error" context="*:b058">
-            <report test="string(number(.)) != 'NaN'" properties="refname"> 
+            <report 
+              test="string(number(.)) != 'NaN'" 
+              properties="refname"> 
                 In b058 (EditionStatement) steht nur eine Nummer, obwohl hier eine Beschreibung der Edition sein soll.
             </report>
         </rule>
@@ -103,10 +117,11 @@
                *:product[count(.//*:contributor) = 1]
                [.//*:contributor/*:b044]
                //*:textcontent[*:x426 = '12']/*:d104">
-      <assert test="ancestor::*:product[1]//*:contributor[*:b044]/*:b044/normalize-space() = normalize-space(.)"
+      <assert 
+        test="ancestor::*:product[1]//*:contributor[*:b044]/*:b044/normalize-space() = normalize-space(.)"
         properties="refname"> 
         Es gibt nur einen Contributor und dessen Biografietext weicht vom Text für alle Contributoren ab. 
-        Wenn es nur einen Contributor gibt, benötigt es keine biographical note im other text bzw. text content composite.
+        Wenn es nur einen Contributor gibt, benötigt es keine Gesamtbiografie im Other text bzw. Text content composite.
       </assert>
     </rule>
   </pattern>
@@ -119,17 +134,18 @@
     <rule role="error" 
       context="*:product[count(.//*:contributor[*:b035 = 'A01']) &gt; 1]
                //*:contributor[b035 = 'A01']/*:b044 ">
-      <report test="ancestor::*:product[1]
-                    [count(.//*:contributor[*:b035 = 'A01']) != count(.//*:contributor[*:b035 = 'A01']/*:b044)]"
-                    properties="refname"> 
-        Es gibt ungleich viele Autoren und Biografien in b044 (BiographicalNote). Dies kann zu Fehlern in der biographical note im other text bzw. text content composite führen.
+      <report 
+          test="ancestor::*:product[1]
+                [count(.//*:contributor[*:b035 = 'A01']) != count(.//*:contributor[*:b035 = 'A01']/*:b044)]"
+          properties="refname"> 
+        Es gibt ungleich viele Autoren und Biografien in b044 (BiographicalNote). Dies kann zu Fehlern in der Gesamtbiografie im Other text bzw. Text content composite führen.
       </report>
     </rule>
   </pattern>
   
   <!-- Mehr als ein Contributor, einer davon hat einen Text und dieser stimmt mit Gesamtbiografie überein (falsche Verwendung)-->
   <pattern id="ContributorGesamtbio">
-    <rule role="info" context="
+    <rule role="error" context="
                 *:product[count(*:contributor) &gt; 1]
                 [*:contributor/*:b044]
                 /*:othertext[*:d102 = '13']/*:d104 |
@@ -137,10 +153,12 @@
                *:product[count(.//*:contributor) &gt; 1]
                [.//*:contributor/*:b044]
                //*:textcontent[*:x426 = '12']/*:d104">
-      <report test="ancestor::*:product[1]//*:contributor[*:b044]/*:b044/normalize-space() = normalize-space(.)" > 
-        Der Biografietext eines Contributors stimmt mit dem Text für alle Contributoren im OtherText composite überein. 
-        Es sollte im OtherText composite aber um mehrere Contributoren gehen.
-        (Der Biografietext im OtherText composite sollte gelöscht werden.)
+      <report 
+        test="ancestor::*:product[1]//*:contributor[*:b044]/*:b044/normalize-space() = normalize-space(.)"
+        properties="refname"> 
+        Der Biografietext eines Contributors stimmt mit dem Text für alle Contributoren im Other text bzw. Text content composite überein,
+        obwohl es darin aber um mehrere Contributoren gehen sollte.
+        Vorschlag: Der Biografietext im Other text bzw. Text content composite sollte gelöscht werden.
       </report>
     </rule>
   </pattern>
@@ -160,7 +178,9 @@
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>
-      <report test="exists($VPunkt)"> 
+      <report 
+        test="exists($VPunkt)"
+        properties="refname"> 
         Fehlt ein Leerzeichen zwischen zwei Sätzen? Fundstelle(n): <xsl:value-of select="string-join($VPunkt, ', ')"/>
       </report>
     </rule>
@@ -177,7 +197,9 @@
           string-join(for $t in $tokenized
           return
           replace(replace($t, '\.', '(\\.|\\w+)'), '\?', '\\?'), ' ')"/>
-      <assert test="contains(., $b036) or contains(., $firstLast) or matches(., $b036-regex)"> 
+      <assert 
+        test="contains(., $b036) or contains(., $firstLast) or matches(., $b036-regex)"
+        properties="refname"> 
         Der Name des Contributors muss im Biografietext vorkommen und sollte mit dem angegebenen Namen ('<value-of select="ancestor::*:contributor/*:b036"/>')
         übereinstimmen. 
       </assert>
@@ -186,8 +208,10 @@
 
   <!-- in einer Biografie steht URL, das kann zu Fehlern in Verarbeitung führen -->
   <pattern id="BioURL">
-    <rule role="warning" context="*:b044">
-      <report test="contains(., 'www.') or contains(., '.de') or contains(., '.com')" > 
+    <rule role="error" context="*:b044">
+      <report 
+        test="contains(., 'www.') or contains(., '.de') or contains(., '.com')"
+        properties="refname"> 
         Eine URL sollte nicht in einer Biographical note stehen.
         Vorschlag: Nutze dafür das Website composite.
       </report>
@@ -199,7 +223,9 @@
     <rule role="error" context="*:b062">
       <!--<report test="matches(., '^\d+$')"> a </report>
       <report test=". castable as xs:integer"> b </report>-->
-      <report test="string(number(.)) != 'NaN'" properties="refname" > 
+      <report 
+        test="string(number(.)) != 'NaN'"
+        properties="refname"> 
         In b062 (IllustrationsNote) steht nur eine Nummer, obwohl hier eine Anmerkung stehen soll.
         Vorschlag: Überführe die Zahl in b125 (NumberOfIllustrations).
       </report>
@@ -209,23 +235,28 @@
  <!-- Empfehlungen für Zeichenlängen in best. Elementen; hier aus der Dokumentation -->
   <!-- individuelle Empfehlungen oder Wünsche auch mgl. -->
   <pattern id="Zeichenlaenge">
-    <rule role="information" context="*:b203">
-      <report test="./string-length() &gt; 300"> 
-        Die empfohlene Länge beträgt hier 300 Zeichen. Wenn möglich, kürze den Text.
-      </report>
-    </rule>
-    <!--    <rule role="information" context="*:b336">
-      <report test="./string-length() &gt; 100"> 
-        Die empfohlene Länge beträgt hier 100 Zeichen. Wenn möglich, kürze den Text.
+<!--    <rule role="information" context="*:b203">
+      <report 
+        test="./string-length() &gt; 300"
+        properties="refname" > 
+        Die empfohlene Länge beträgt hier 300 Zeichen. Vorschlag: Kürze den Text.
       </report>
     </rule>-->
+     <rule role="information" context="*:b336">
+      <report 
+        test="./string-length() &gt; 100"
+        properties="refname"> 
+        Die empfohlene Länge beträgt hier 100 Zeichen. Wenn möglich, kürze den Text.
+      </report>
+    </rule>
   </pattern>
 
   <!-- Empfehlung bei seit ... Jahren -->
   <pattern id="SeitJahren">
     <rule role="warning" context="*:b044 | *:othertext[*:d102 = '13']/*:d104 | *:textcontent[*:x426='12']/*:d104">
       <report 
-        test="matches(., 'seit[\p{Zs}\s]+(\d+|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)[\p{Zs}\s]+Jahren', 'i')" > 
+        test="matches(., 'seit[\p{Zs}\s]+(\d+|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)[\p{Zs}\s]+Jahren', 'i')"
+        properties="refname"> 
         Die Information in der Biografie kann veraltet sein. Vorschlag: "seit dem Jahr ..." oder " seit über ... Jahren".
       </report>
     </rule>
@@ -252,7 +283,9 @@
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>
-      <report test="exists($VBindestrich)" properties="refname"> 
+      <report 
+        test="exists($VBindestrich)" 
+        properties="refname"> 
         Liegt eine fehlerhafte Worttrennung vor? Fundstelle(n): <xsl:value-of select="string-join($VBindestrich, ', ')"/>
       </report>
     </rule>
@@ -281,7 +314,9 @@
           </xsl:matching-substring>
         </xsl:analyze-string>
       </xsl:variable>
-      <report test="exists($VDreiBuchstaben)"> 
+      <report 
+        test="exists($VDreiBuchstaben)"
+        properties="refname"> 
         Drei identische Buchstaben erscheinen hintereinander. Liegt ein Rechtschreibfehler vor? 
         Fundstelle(n): <xsl:value-of select="string-join($VDreiBuchstaben, ', ')"/>
       </report>
@@ -294,7 +329,10 @@
   <pattern id="TOCDefaultTextFormat">
     <rule role="information"
       context="*:othertext[*:d102 = '04'][*:d103 = '06']/*:d104">
-      <report test="exists(.)" >
+      <!-- auch mgl.: test="exists", da werden keine br / geduldet. -->
+      <report
+        test="not(matches(., 'br /'))"
+        properties="refname">
         Das TOC könnte auf eine Website übernommen werden und so seine Struktur verlieren.
         Vorschlag: Nutze bei d102 den Code 02 und überführe das TOC in eine HTML-Struktur.
       </report>
@@ -307,7 +345,9 @@
       context="*:title | *:subject | *:contributor | *:d104 | 
                *:titleelement" >
       <let name="ZahlFehler-Regex" value="'\d+[?]\d+'"/>
-      <report test="matches(., $ZahlFehler-Regex)"> 
+      <report 
+        test="matches(., $ZahlFehler-Regex)"
+        properties="refname"> 
         <xsl:variable name="VZahlFehler" as="xs:string*"> <!-- + auch mgl. -->
         <xsl:analyze-string select="." regex="{$ZahlFehler-Regex}">
           <xsl:matching-substring>
@@ -330,7 +370,9 @@
       context="*:title | *:subject | *:contributor | *:d104 |
                *:titleelement">
       <let name="UmlautFehler-Regex" value="'\w*[aouAOU][?][a-z]\w*'"/>  
-      <report test="matches(., $UmlautFehler-Regex)">
+      <report 
+        test="matches(., $UmlautFehler-Regex)"
+        properties="refname">
         <xsl:variable name="VUmlautFehler" as="xs:string*">
         <xsl:analyze-string select="." regex="{$UmlautFehler-Regex}">
           <xsl:matching-substring>
@@ -355,7 +397,9 @@
    vor einem Fragezeichen ist ein Whitespace und danach folgt *keine Ziffer oder kein Buchstabe*
        Bsp.: 2018 ? 1--> 
     <let name="SpaceFragezeichen-Regex" value="'\w*\s[?]\W\w*'"/>
-    <report  test="matches(., $SpaceFragezeichen-Regex, 's')">
+    <report  
+      test="matches(., $SpaceFragezeichen-Regex, 's')"
+      properties="refname">
       <xsl:variable name="VSpaceFragezeichen" as="xs:string*">
         <xsl:analyze-string select="." regex="{$SpaceFragezeichen-Regex}" flags="s">
           <xsl:matching-substring>
@@ -367,11 +411,12 @@
       Fundstelle(n): <xsl:value-of select="string-join($VSpaceFragezeichen, ', ')" />
     </report>
     
-    
     <!-- B: nach einem Zeichen *außer aou* kommt direkt ein Fragezeichen und danach ein kleiner Buchstabe
       Bsp.: 113?ff -->
     <let name="SonstigeKodierungsfehler1-Regex" value="'\w*.[^a^o^u^A^O^U][?]\p{Ll}+'"/> 
-    <report test="matches(., $SonstigeKodierungsfehler1-Regex)">
+    <report 
+      test="matches(., $SonstigeKodierungsfehler1-Regex)"
+      properties="refname">
     <xsl:variable name="VwkF1" as="xs:string*">
         <xsl:analyze-string select="." regex="{$SonstigeKodierungsfehler1-Regex}" flags="s">
           <xsl:matching-substring>
@@ -385,7 +430,9 @@
      <!--C: nach einem Punkt kommt direkt ein Fragezeichen und danach ein Großbuchstabe.
     leicht anders, als "FehlendesSpace", Bsp.: St.?Gallen -->
     <let name="SonstigeKodierungsfehler2-Regex" value="'\w*\.[?]\p{Lu}+'"/>  
-    <report test="matches(., $SonstigeKodierungsfehler2-Regex )">
+    <report 
+      test="matches(., $SonstigeKodierungsfehler2-Regex )"
+      properties="refname">
     <xsl:variable name="VwkF2" as="xs:string*">
         <xsl:analyze-string select="." regex="{$SonstigeKodierungsfehler2-Regex}" flags="s" >
           <xsl:matching-substring>
@@ -396,11 +443,12 @@
      C: Hier liegen möglicherweise Kodierungsfehler vor. Fundstelle(n): <xsl:value-of select="string-join($VwkF2, ', ')" />      
     </report>
     
-    
     <!--D: nach einem Zeichen *außer einer Ziffer* kommt direkt ein Fragezeichen und danach eine Ziffer (1?00 ausschließen)
     Bsp.: §?175   kann?10 S.?75-->
     <let name="SonstigeKodierungsfehler3-Regex" value="'.?\D[?]\d+'"/> 
-    <report test="matches(., $SonstigeKodierungsfehler3-Regex )">
+    <report 
+      test="matches(., $SonstigeKodierungsfehler3-Regex )"
+      properties="refname">
     <xsl:variable name="VwkF3" as="xs:string*">
         <xsl:analyze-string select="." regex="{$SonstigeKodierungsfehler3-Regex}" flags="s">
           <xsl:matching-substring>
@@ -420,7 +468,9 @@
     Bsp.: 2., aktualisierte Auflage -->
 <pattern id="UntertitelAuflage">
   <rule role="error" context="*:b029">
-    <report test="contains(., 'Auflage')">
+    <report 
+      test="contains(., 'Auflage')"
+      properties="refname">
       In b029 (Subtitle) steht die Auflage. 
       Vorschlag: Überführe den Text in b058 (EditionStatement).
     </report>
@@ -432,7 +482,9 @@
   Bsp.: How to Transform Your Organization from the Inside Out, plus E-Book inside (ePub, mobi oder pdf)-->
   <pattern id="UntertitelErweiterung">
   <rule role="warning" context="*:b029">
-    <report test="contains(., 'Book')">
+    <report 
+      test="contains(., 'Book')"
+      properties="refname">
       In b029 (Subtitle) stehen möglicherweise Marketinginformationen. 
       Vorschlag: Überführe die Information in ein Other text bzw. Text content composite.
     </report>
