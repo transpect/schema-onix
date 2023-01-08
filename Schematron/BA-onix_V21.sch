@@ -4,13 +4,14 @@
   xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <phase id="EinzelTest">
-    <active pattern="Spielmeldung"/><!--Für Anpassung dem Attributwert die ID des entspr. Patterns geben-->
+    <active pattern="SpielmeldungV21"/><!--Für Anpassung dem Attributwert die ID des entspr. Patterns geben-->
   </phase>
   
   <phase id="FalscheVerwendung">
     <active pattern="AbbildungsnotizSeiten"/>
-    <active pattern="EditionsbeschreibungZiffer"/>
-    <active pattern="Spielmeldung"/>
+    <active pattern="EditionsbeschreibungFehler"/>
+    <active pattern="SpielmeldungV21"/>
+    <active pattern="SpielmeldungV30"/>
     <active pattern="AbbildungsnotizZiffer"/>
     <active pattern="UntertitelAuflage"/>
     <active pattern="UntertitelErweiterung"/>
@@ -23,8 +24,8 @@
     <active pattern="BioURL"/>
   </phase>
   <phase id="TextFehler">
-    <active pattern="Bindestrich"/>
-    <active pattern="DreiBuchstaben"/>
+    <active pattern="Bindestrich"/>     <!-- "Bindestrich" löst ggf. viele überschüssige Reports aus. Ggf. empfiehlt es sich, dieses Pattern auszukommentieren. -->
+    <active pattern="DreiBuchstaben"/>  <!-- "DreiBuchstaben" löst ggf. viele überschüssige Reports aus. Ggf. empfiehlt es sich, dieses Pattern auszukommentieren. -->
     <active pattern="FehlendesSpace"/>
     <active pattern="ZahlFehler"/>
     <active pattern="UmlautFehler"/>
@@ -41,33 +42,64 @@
     <property id="refname"><xsl:value-of select="@refname"/></property>
   </properties>
 
-
-  <!-- NEU:Spielmeldung 4.3. , not() in erstem Report-Test, damit sich die Meldungen nicht überschneiden -->
-  <pattern id="Spielmeldung">
-    <rule context="*:b012[.='BZ'] | *:b012[.='PZ'] | *:b012[.='ZA'] | 
-                   *:b012[.='ZZ'] | *:b012[.='00']" >
-      <!-- ONIX 2.1 -->
-      <report role="information" 
-        test="exists(.) and not(parent::product/title[matches(., 'Spiel|spiel|Quiz|quiz|Game|game')])"
+<!-- VERSUCH: 2.1, Pattern-Prinzip Sieb (S. 56); 
+    ein Knoten einer Instanz kann irgendwie trotzdem mehrmals auf die Kontextknoten der Rules eines Patterns passen.
+  Die Regel gibt 2 Fehlermeldungen aus für einen Fehler aus.-->
+<!--  <pattern id="SpielmeldungV21TRY">
+    <rule context="product/b012[.='BZ'] | product/b012[.='PZ'] | product/b012[.='ZA'] | 
+      product/b012[.='ZZ'] | product/b012[.='00']" >      
+      <report role="warning" 
+        test="parent::product/title[matches(., 'spiel|quiz|game', 'i')]"
         properties="refname">
-        Es handelt sich möglicherweise um ein Nonbookprodukt, das ungenau kategorisiert wurde.
+        V2.1: Handelt es sich bei dem Produkt um ein Spiel? Vorschlag: In b012 (ProductForm) den Code ZE nutzen.
+      </report>   
+      <report role="information" 
+        test="exists(.)"
+        properties="refname">
+        V2.1: Es handelt sich möglicherweise um ein Nonbookprodukt, das ungenau kategorisiert wurde.
+        Vorschlag: In b012 (ProductForm) den Code anpassen.
+      </report>   
+    </rule>
+  </pattern> -->
+  
+  
+  
+  <!-- NEU:Spielmeldung 4.1. , not() in erstem Report-Test, damit sich die Meldungen nicht überschneiden -->
+  <!-- ONIX 2.1 -->
+  <pattern id="SpielmeldungV21">
+    <rule context="product/b012[.='BZ'] | product/b012[.='PZ'] | product/b012[.='ZA'] | 
+                   product/b012[.='ZZ'] | product/b012[.='00']" >      
+      <report role="information" 
+        test="exists(.) and not(parent::product/title[matches(., 'spiel|quiz|game', 'i')])"
+        properties="refname">
+        V2.1: Es handelt sich möglicherweise um ein Nonbookprodukt, das ungenau kategorisiert wurde.
         Vorschlag: In b012 (ProductForm) den Code anpassen.
       </report>
       <report role="warning" 
-        test="parent::product/title[matches(., 'Spiel|spiel|Quiz|quiz|Game|game')]"
+        test="parent::product/title[matches(., 'spiel|quiz|game', 'i')]"
         properties="refname">
-        Handelt es sich bei dem Produkt um ein Spiel? Vorschlag: In b012 (ProductForm) den Code ZE nutzen.
-      </report>
-      
-      <!-- ONIX 3.0 (hier kann schwer verhindert werden, dass nicht auch die Meldung des ersten Reports genannt wird. -->
-      <report role="warning" 
-        test="ancestor::*:product//*:titledetail[matches(., 'Spiel|spiel|Quiz|quiz|Game|game')]"
-        properties="refname">
-        Handelt es sich bei dem Produkt um ein Spiel? Vorschlag: In b012 (ProductForm) den Code ZE nutzen.
-      </report>
+        V2.1: Handelt es sich bei dem Produkt um ein Spiel? Vorschlag: In b012 (ProductForm) den Code ZE nutzen.
+      </report>   
     </rule>
   </pattern>
   
+  <!-- ONIX 3.0 -->
+  <pattern id="SpielmeldungV30">
+    <rule context="*:product/*:descriptivedetail/*:b012[.='BZ'] | *:product/*:descriptivedetail/*:b012[.='PZ'] | *:product/*:descriptivedetail/*:b012[.='ZA'] | 
+                   *:product/*:descriptivedetail/*:b012[.='ZZ'] | *:product/*:descriptivedetail/*:b012[.='00']" >
+      <report role="information" 
+        test="exists(.) and not(parent::*:descriptivedetail/*:titledetail[matches(., 'spiel|quiz|game', 'i')])"
+        properties="refname">
+        V3.0: Es handelt sich möglicherweise um ein Nonbookprodukt, das ungenau kategorisiert wurde.
+        Vorschlag: In b012 (ProductForm) den Code anpassen.
+      </report>
+      <report role="warning" 
+        test="parent::*:descriptivedetail/*:titledetail[matches(., 'spiel|quiz|game', 'i')]"
+        properties="refname">
+        V3.0: Handelt es sich bei dem Produkt um ein Spiel? Vorschlag: In b012 (ProductForm) den Code ZE nutzen.
+      </report>   
+    </rule>
+  </pattern>
 
 
     <!-- NEU: inflat. Verwendung von Kewords, Tag b067 List 20-->
@@ -95,17 +127,17 @@
         </rule>
     </pattern>
 
-<!--NEU: EditionStatement b058 (Verlag D, E, A_V30):  muss eine Beschreibung der Edition enthalten. Nicht nur Zahl.-->
-    <pattern id="EditionsbeschreibungZiffer">
-        <rule role="error" context="*:b058">
-            <report 
-              test="string(number(.)) != 'NaN'" 
-              properties="refname"> 
-                In b058 (EditionStatement) steht nur eine Nummer, obwohl hier eine Beschreibung der Edition sein soll.
-            </report>
-        </rule>
-    </pattern>
 
+  <pattern id="EditionsbeschreibungFehler">
+    <rule role="warning" context="*:b058">
+      <assert 
+        test="matches(., '(\d[.]|\d(st|nd|rd|th)|erst|zweite|dritte|vierte|fünfte|sechste|siebte|achte|neunte|zehnte)', 'i')"
+        properties="refname"> 
+        Die Beschreibung in b058 (EditionStatement) ist möglicherweise unvollständig oder fehlerhaft.
+        Fundstelle(n): <xsl:value-of select="."/>
+      </assert>
+    </rule>
+  </pattern>
 
   <!-- Nur ein Contributor (egal welche Rolle), Texte unterscheiden sich -->
   <pattern id="EinContributorBios">
@@ -131,7 +163,7 @@
   <!-- Mehrere Contributoren mit Autorenrolle, aber nicht jeder hat eine Einzelbiografie -->
   <!--Fall vermeiden, dass es z.B. 2 Autoren gibt und nur einer eine Bio hat, die in die Gesamtbio kommt-->
   <pattern id="AutorenBios">
-    <rule role="error" 
+    <rule role="warning" 
       context="*:product[count(.//*:contributor[*:b035 = 'A01']) &gt; 1]
                //*:contributor[b035 = 'A01']/*:b044 ">
       <report 
@@ -163,6 +195,25 @@
     </rule>
   </pattern>
 
+
+  <!-- angegebener Name unterscheidet sich bei Name und Einzelbiografie -->
+  <pattern id="BioName">
+    <rule role="error" context="*:b044" >
+      <let name="b036" value="ancestor::*:contributor/*:b036/normalize-space()"/>
+      <let name="tokenized" value="tokenize($b036, ' ')"/>
+      <let name="firstLast" value="string-join(($tokenized[1], $tokenized[last()]), ' ')"/>
+      <let name="b036-regex" value="
+        string-join(for $t in $tokenized
+        return
+        replace(replace($t, '\.', '(\\.|\\w+)'), '\?', '\\?'), ' ')"/>
+      <assert 
+        test="contains(., $b036) or contains(., $firstLast) or matches(., $b036-regex)"
+        properties="refname"> 
+        Der Name des Contributors muss im Biografietext vorkommen und sollte mit dem angegebenen Namen ('<value-of select="ancestor::*:contributor/*:b036"/>')
+        übereinstimmen. 
+      </assert>
+    </rule>
+  </pattern>
 <!-- Fehlendes Leerzeichen zwischen zwei Sätzen, Bsp.: Buch:Wer
   FehlendesSpace mit exists--> <!-- Nr. 1: d104 | b044 ; Nr. 2: ONIXmessage/product/othertext/d104 | ONIXmessage/product/contributor/b044 ;
   Nr. 3: ONIXmessage/product[contributor/b044|othertext/d104] Nr. 4: nur product, so gibt es weniger Fehlermeldungen-Anzahl-->
@@ -187,24 +238,6 @@
   </pattern>
   
 
-  <!-- angegebener Name unterscheidet sich bei Name und Einzelbiografie -->
-  <pattern id="BioName">
-    <rule role="error" context="*:b044" >
-      <let name="b036" value="ancestor::*:contributor/*:b036/normalize-space()"/>
-      <let name="tokenized" value="tokenize($b036, ' ')"/>
-      <let name="firstLast" value="string-join(($tokenized[1], $tokenized[last()]), ' ')"/>
-      <let name="b036-regex" value="
-          string-join(for $t in $tokenized
-          return
-          replace(replace($t, '\.', '(\\.|\\w+)'), '\?', '\\?'), ' ')"/>
-      <assert 
-        test="contains(., $b036) or contains(., $firstLast) or matches(., $b036-regex)"
-        properties="refname"> 
-        Der Name des Contributors muss im Biografietext vorkommen und sollte mit dem angegebenen Namen ('<value-of select="ancestor::*:contributor/*:b036"/>')
-        übereinstimmen. 
-      </assert>
-    </rule>
-  </pattern>
 
   <!-- in einer Biografie steht URL, das kann zu Fehlern in Verarbeitung führen -->
   <pattern id="BioURL">
@@ -253,7 +286,8 @@
 
   <!-- Empfehlung bei seit ... Jahren -->
   <pattern id="SeitJahren">
-    <rule role="warning" context="*:b044 | *:othertext[*:d102 = '13']/*:d104 | *:textcontent[*:x426='12']/*:d104">
+    <rule role="warning" context="*:b044 | *:othertext[*:d102 = '13']/*:d104 |
+                                           *:textcontent[*:x426='12']/*:d104">
       <report 
         test="matches(., 'seit[\p{Zs}\s]+(\d+|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)[\p{Zs}\s]+Jahren', 'i')"
         properties="refname"> 
@@ -462,6 +496,18 @@
   </rule>
 </pattern>
 
+  <!-- im Untertitel-Segment stehen evtl. Marketinginformationen,
+  Bsp.: How to Transform Your Organization from the Inside Out, plus E-Book inside (ePub, mobi oder pdf)-->
+  <pattern id="UntertitelErweiterung">
+    <rule role="warning" context="*:b029">
+      <report 
+        test="contains(., 'Book')"
+        properties="refname">
+        In b029 (Subtitle) stehen möglicherweise Marketinginformationen. 
+        Vorschlag: Überführe die Information in ein Other text bzw. Text content composite.
+      </report>
+    </rule>
+  </pattern>
 
 
 <!-- Die Auflage steht im Untertitel-Segment, 
@@ -478,18 +524,7 @@
 </pattern>
   
   
-  <!-- im Untertitel-Segment stehen evtl. Marketinginformationen,
-  Bsp.: How to Transform Your Organization from the Inside Out, plus E-Book inside (ePub, mobi oder pdf)-->
-  <pattern id="UntertitelErweiterung">
-  <rule role="warning" context="*:b029">
-    <report 
-      test="contains(., 'Book')"
-      properties="refname">
-      In b029 (Subtitle) stehen möglicherweise Marketinginformationen. 
-      Vorschlag: Überführe die Information in ein Other text bzw. Text content composite.
-    </report>
-  </rule>
-</pattern>
+
 
 
   
