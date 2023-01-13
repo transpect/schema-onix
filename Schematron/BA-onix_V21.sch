@@ -1,40 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
+<!-- Schematron für ONIX 2.1 und 3.0, Patterns sind nicht sortiert -->
 <schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2"
   xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <phase id="EinzelTest">
-    <active pattern="SpielmeldungV21"/><!--Für Anpassung dem Attributwert die ID des entspr. Patterns geben-->
+    <active pattern="EditionsbeschreibungFehler"/><!--Für Anpassung dem Attributwert die ID des entspr. Patterns geben-->
   </phase>
   
   <phase id="FalscheVerwendung">
-    <active pattern="AbbildungsnotizSeiten"/>
     <active pattern="EditionsbeschreibungFehler"/>
-    <active pattern="SpielmeldungV21"/>
-    <active pattern="SpielmeldungV30"/>
     <active pattern="AbbildungsnotizZiffer"/>
     <active pattern="UntertitelAuflage"/>
+    <active pattern="AbbildungsnotizSeiten"/>
+    <active pattern="NonbookmeldungV21"/>
+    <active pattern="NonbookmeldungV30"/>
     <active pattern="UntertitelErweiterung"/>
   </phase>
   <phase id="BiografieFehler">
     <active pattern="ContributorGesamtbio"/>
     <active pattern="EinContributorBios"/>
-    <active pattern="AutorenBios"/> 
     <active pattern="BioName"/>
     <active pattern="BioURL"/>
+    <active pattern="AutorenBios"/>
   </phase>
   <phase id="TextFehler">
-    <active pattern="Bindestrich"/>     <!-- "Bindestrich" löst ggf. viele überschüssige Reports aus. Ggf. empfiehlt es sich, dieses Pattern auszukommentieren. -->
-    <active pattern="DreiBuchstaben"/>  <!-- "DreiBuchstaben" löst ggf. viele überschüssige Reports aus. Ggf. empfiehlt es sich, dieses Pattern auszukommentieren. -->
     <active pattern="FehlendesSpace"/>
     <active pattern="ZahlFehler"/>
     <active pattern="UmlautFehler"/>
     <active pattern="SonstigeKodierungsfehler"/>
+<!--    <active pattern="Bindestrich"/>-->
+<!--    <active pattern="DreiBuchstaben"/>-->
   </phase>
   <phase id="Empfehlung">
+    <active pattern="SeitJahren"/>
     <active pattern="KeywordInflation"/>
     <active pattern="Zeichenlaenge"/>
-    <active pattern="SeitJahren"/>
     <active pattern="TOCDefaultTextFormat"/>
   </phase>
 
@@ -45,7 +45,7 @@
 <!-- VERSUCH: 2.1, Pattern-Prinzip Sieb (S. 56); 
     ein Knoten einer Instanz kann irgendwie trotzdem mehrmals auf die Kontextknoten der Rules eines Patterns passen.
   Die Regel gibt 2 Fehlermeldungen aus für einen Fehler aus.-->
-<!--  <pattern id="SpielmeldungV21TRY">
+<!--  <pattern id="NonbookmeldungV21TRY">
     <rule context="product/b012[.='BZ'] | product/b012[.='PZ'] | product/b012[.='ZA'] | 
       product/b012[.='ZZ'] | product/b012[.='00']" >      
       <report role="warning" 
@@ -64,9 +64,9 @@
   
   
   
-  <!-- NEU:Spielmeldung 4.1. , not() in erstem Report-Test, damit sich die Meldungen nicht überschneiden -->
+  <!-- NEU:Nonbookmeldung 4.1. , not() in erstem Report-Test, damit sich die Meldungen nicht überschneiden -->
   <!-- ONIX 2.1 -->
-  <pattern id="SpielmeldungV21">
+  <pattern id="NonbookmeldungV21">
     <rule context="product/b012[.='BZ'] | product/b012[.='PZ'] | product/b012[.='ZA'] | 
                    product/b012[.='ZZ'] | product/b012[.='00']" >      
       <report role="information" 
@@ -84,7 +84,7 @@
   </pattern>
   
   <!-- ONIX 3.0 -->
-  <pattern id="SpielmeldungV30">
+  <pattern id="NonbookmeldungV30">
     <rule context="*:product/*:descriptivedetail/*:b012[.='BZ'] | *:product/*:descriptivedetail/*:b012[.='PZ'] | *:product/*:descriptivedetail/*:b012[.='ZA'] | 
                    *:product/*:descriptivedetail/*:b012[.='ZZ'] | *:product/*:descriptivedetail/*:b012[.='00']" >
       <report role="information" 
@@ -129,9 +129,9 @@
 
 
   <pattern id="EditionsbeschreibungFehler">
-    <rule role="warning" context="*:b058">
+    <rule role="error" context="*:b058">
       <assert 
-        test="matches(., '(\d[.]|\d(st|nd|rd|th)|erst|zweite|dritte|vierte|fünfte|sechste|siebte|achte|neunte|zehnte)', 'i')"
+        test="matches(., '\d[.]|\d(st|nd|rd|th)|(erst|zweit|dritt|viert|fünft|sechst|siebt|acht|neunt|zehnt)', 'i')"
         properties="refname"> 
         Die Beschreibung in b058 (EditionStatement) ist möglicherweise unvollständig oder fehlerhaft.
         Fundstelle(n): <xsl:value-of select="."/>
@@ -254,10 +254,9 @@
   <!-- IllustrationsNote ist für Anmerkungen da -->
   <pattern id="AbbildungsnotizZiffer">
     <rule role="error" context="*:b062">
-      <!--<report test="matches(., '^\d+$')"> a </report>
-      <report test=". castable as xs:integer"> b </report>-->
+      <!--  "string(number(.)) != 'NaN'" -->
       <report 
-        test="string(number(.)) != 'NaN'"
+        test=". castable as xs:integer"
         properties="refname"> 
         In b062 (IllustrationsNote) steht nur eine Nummer, obwohl hier eine Anmerkung stehen soll.
         Vorschlag: Überführe die Zahl in b125 (NumberOfIllustrations).
@@ -299,7 +298,7 @@
   <!-- Fehlerhafte Worttrennung, Bsp.: be-nutzen -->
   <pattern id="Bindestrich">
     <rule role="information" 
-      context="*:product[//*:language[b253 = '01'][//*:b252 = 'ger']]//*:d104 |
+      context="*:product[//*:language[*:b253 = '01'][//*:b252 = 'ger']]//*:d104 |
                *:product[//*:language[*:b253 = '01'][*:b252 = 'ger']]//*:b044 |
                *:product//*:d104[not(@language='eng')] |
                *:product//*:b044[not(@language='eng')]">
@@ -325,9 +324,6 @@
     </rule>
   </pattern>  
   
-  
-  
-
 <!-- drei ident. Buchstaben hintereinander, Bsp.: solllte-->
   <pattern id="DreiBuchstaben">
     <rule role="information" 
@@ -365,7 +361,7 @@
       context="*:othertext[*:d102 = '04'][*:d103 = '06']/*:d104">
       <!-- auch mgl.: test="exists", da werden keine br / geduldet. -->
       <report
-        test="not(matches(., 'br /'))"
+        test="not(contains(., 'br\s*/'))"
         properties="refname">
         Das TOC könnte auf eine Website übernommen werden und so seine Struktur verlieren.
         Vorschlag: Nutze bei d102 den Code 02 und überführe das TOC in eine HTML-Struktur.
@@ -376,13 +372,12 @@
 <!-- Kodierungsfehler in Zahl, Bsp.: 200?000 -->
 <pattern id="ZahlFehler">
     <rule role="warning" 
-      context="*:title | *:subject | *:contributor | *:d104 | 
-               *:titleelement" >
+      context="*:d104" >
       <let name="ZahlFehler-Regex" value="'\d+[?]\d+'"/>
       <report 
         test="matches(., $ZahlFehler-Regex)"
         properties="refname"> 
-        <xsl:variable name="VZahlFehler" as="xs:string*"> <!-- + auch mgl. -->
+        <xsl:variable name="VZahlFehler" as="xs:string*">
         <xsl:analyze-string select="." regex="{$ZahlFehler-Regex}">
           <xsl:matching-substring>
               <xsl:value-of select="."/>
@@ -401,7 +396,7 @@
   <!-- nach a o u kommt ein Fragezeichen, Bsp.: fu?r -->
   <pattern id="UmlautFehler">
     <rule role="warning" 
-      context="*:title | *:subject | *:contributor | *:d104 |
+      context="*:title | *:contributor | *:d104 |
                *:titleelement">
       <let name="UmlautFehler-Regex" value="'\w*[aouAOU][?][a-z]\w*'"/>  
       <report 
@@ -429,13 +424,13 @@
     
    <!-- SpaceFragezeichen:
    vor einem Fragezeichen ist ein Whitespace und danach folgt *keine Ziffer oder kein Buchstabe*
-       Bsp.: 2018 ? 1--> 
+       Bsp.: 2018 ? 1 oder der ?Hirnstamm --> 
     <let name="SpaceFragezeichen-Regex" value="'\w*\s[?]\W\w*'"/>
     <report  
-      test="matches(., $SpaceFragezeichen-Regex, 's')"
+      test="matches(., $SpaceFragezeichen-Regex)"
       properties="refname">
       <xsl:variable name="VSpaceFragezeichen" as="xs:string*">
-        <xsl:analyze-string select="." regex="{$SpaceFragezeichen-Regex}" flags="s">
+        <xsl:analyze-string select="." regex="{$SpaceFragezeichen-Regex}">
           <xsl:matching-substring>
             <xsl:value-of select="."/>
           </xsl:matching-substring>
@@ -465,7 +460,7 @@
     leicht anders, als "FehlendesSpace", Bsp.: St.?Gallen -->
     <let name="SonstigeKodierungsfehler2-Regex" value="'\w*\.[?]\p{Lu}+'"/>  
     <report 
-      test="matches(., $SonstigeKodierungsfehler2-Regex )"
+      test="matches(., $SonstigeKodierungsfehler2-Regex)"
       properties="refname">
     <xsl:variable name="VwkF2" as="xs:string*">
         <xsl:analyze-string select="." regex="{$SonstigeKodierungsfehler2-Regex}" flags="s" >
@@ -481,7 +476,7 @@
     Bsp.: §?175   kann?10 S.?75-->
     <let name="SonstigeKodierungsfehler3-Regex" value="'.?\D[?]\d+'"/> 
     <report 
-      test="matches(., $SonstigeKodierungsfehler3-Regex )"
+      test="matches(., $SonstigeKodierungsfehler3-Regex)"
       properties="refname">
     <xsl:variable name="VwkF3" as="xs:string*">
         <xsl:analyze-string select="." regex="{$SonstigeKodierungsfehler3-Regex}" flags="s">
@@ -522,10 +517,5 @@
     </report>
   </rule>
 </pattern>
-  
-  
-
-
-
   
 </schema>
