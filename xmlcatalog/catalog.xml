@@ -7,6 +7,18 @@
   <rewriteSystem systemIdStartString="http://www.editeur.org/onix/2.1/short/"
                  rewritePrefix="../2.1/dtd/short/"/>
   
+  <systemSuffix systemIdSuffix="ONIX_BookProduct_3.0_reference.dtd" 
+                uri="../3.0/dtd/reference/ONIX_BookProduct_3.0_reference.dtd"/>
+  
+  <systemSuffix systemIdSuffix="ONIX_BookProduct_3.0_short.dtd" 
+                uri="../3.0/dtd/short/ONIX_BookProduct_3.0_short.dtd"/>
+  
+  <rewriteSystem systemIdStartString="https://www.editeur.org/onix/3.0/reference/" 
+                 rewritePrefix="../3.0/dtd/reference/"/>
+  
+  <rewriteSystem systemIdStartString="https://www.editeur.org/onix/3.0/short/"
+                 rewritePrefix="../3.0/dtd/short/"/>
+  
   <rewriteSystem systemIdStartString="http://intranet/onix/" 
                  rewritePrefix="../3.0/dtd/reference/"/>
   
