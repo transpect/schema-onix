@@ -383,12 +383,16 @@
   
   <pattern id="TOCDefaultTextFormat">
     <rule role="information"
-      context="*:othertext[*:d102 = '04'][*:d103 = '06']/*:d104">
+      context="*:othertext[*:d102 = '04'][*:d103 = '06']/*:d104  |
+      *:othertext[*:d102='04'][@textformat='06'] |
+      
+      *:textcontent[*:x426 = '04'][@textformat='06']">
       <report
         test="not(contains(., 'br\s*/'))"
         properties="refname">
         Das TOC könnte auf eine Website übernommen werden und so seine Struktur verlieren.
-        Vorschlag: Nutze bei d102 den Code 02 und überführe das TOC in eine HTML-Struktur.
+        Vorschlag: V2.1: Nutze bei d103 den Code 05 und überführe das TOC in eine XHTML-Struktur. 
+        V3.0: Nutze bei @textformat den Code 05 und überführe das TOC in eine XHTML-Struktur.
       </report>
     </rule>
   </pattern>

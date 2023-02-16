@@ -306,10 +306,12 @@
   </pattern>
 
   <pattern id="TOCDefaultTextFormat">
-    <rule role="information" context="othertext[d102 = '04'][d103 = '06']/d104">
+    <rule role="information" context="othertext[d102 = '04']
+      [d103 = '06']/d104      |
+      othertext[d102='04'][@textformat='06']">
       <report test="not(matches(., 'br\s*/'))">
         Das TOC könnte auf eine Website übernommen werden und so seine Struktur verlieren.
-        Vorschlag: Nutze bei d102 den Code 02 und überführe das TOC in eine HTML-Struktur.
+        Vorschlag: Nutze bei d103 den Code 05 und überführe das TOC in eine XHTML-Struktur.
       </report>
     </rule>
   </pattern>
