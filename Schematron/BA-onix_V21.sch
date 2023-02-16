@@ -4,7 +4,7 @@
   xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <phase id="EinzelTest">
-    <active pattern="EditionsbeschreibungFehler"/><!--Für Anpassung dem Attributwert die ID des entspr. Patterns geben-->
+    <active pattern="BioName"/><!--Für Anpassung dem Attributwert die ID des entspr. Patterns geben-->
   </phase>
   
   <phase id="FalscheVerwendung">
@@ -96,7 +96,7 @@
       <report role="warning" 
         test="parent::*:descriptivedetail/*:titledetail[matches(., 'spiel|quiz|game', 'i')]"
         properties="refname">
-        V3.0: Handelt es sich bei dem Produkt um ein Spiel? Vorschlag: In b012 (ProductForm) den Code ZE nutzen.
+        V3.0: Handelt es sich bei dem Produkt um ein Spiel? Vorschlag: In b012 (ProductForm) den Code C7 nutzen (siehe List 27).
       </report>   
     </rule>
   </pattern>
@@ -196,7 +196,9 @@
   </pattern>
 
 
-  <!-- angegebener Name unterscheidet sich bei Name und Einzelbiografie -->
+  <!-- angegebener Name unterscheidet sich bei Name und Einzelbiografie;
+  Istruktion gilt dafür, dass in b036 ein mittlerer Name enthalten ist (M. oder Maria), der in der Bio fehlt.
+  Umgekehrt gilt das nicht (also wenn in b044 ein mittl. Name zusätzlich auftaucht).-->
   <pattern id="BioName">
     <rule role="error" context="*:b044" >
       <let name="b036" value="ancestor::*:contributor/*:b036/normalize-space()"/>
@@ -214,6 +216,22 @@
       </assert>
     </rule>
   </pattern>
+  
+  
+<!-- kürzere, allgmemeine Alternative zu BioName -->
+<!--  <pattern id="BioNameKURZ">
+    <rule role="error" context="*:b044" >
+      <let name="b036k"
+        value="ancestor::*:contributor/*:b036/normalize-space()"/>
+      <assert test="matches(., $b036k)">
+        Der Name des Contributors muss im Biografietext vorkommen und sollte mit dem angegebenen Namen ('<value-of select="$b036k"/>')
+        übereinstimmen.
+      </assert>
+    </rule>
+  </pattern>
+  -->
+  
+  
 <!-- Fehlendes Leerzeichen zwischen zwei Sätzen, Bsp.: Buch:Wer
   FehlendesSpace mit exists--> <!-- Nr. 1: d104 | b044 ; Nr. 2: ONIXmessage/product/othertext/d104 | ONIXmessage/product/contributor/b044 ;
   Nr. 3: ONIXmessage/product[contributor/b044|othertext/d104] Nr. 4: nur product, so gibt es weniger Fehlermeldungen-Anzahl-->
